@@ -153,7 +153,7 @@ kbd{font-family:var(--ui);font-weight:700;font-size:.9em;border:1px solid var(--
 <div id="intro">
   <div class="card">
     <h1>REY DEL <span>CABALLITO</span></h1>
-    <p class="tag">Supercross en el estadio · moto de 250 cc · 5 niveles con objetivos y tiempo</p>
+    <p class="tag">Supercross en el estadio · moto de 250 cc · 10 niveles con objetivos y tiempo</p>
     <div class="howto">
       <section><h2>CABALLITO</h2><p>Mantén <kbd>↑</kbd> gas y pulsa <kbd>Espacio</kbd> para echarte atrás y levantar la rueda. Suelta Espacio y sigue con gas para mantenerlo. Toca <kbd>↓</kbd> freno para bajarla.</p></section>
       <section><h2>PUNTO DE EQUILIBRIO</h2><p>Entre 55° y 75° (zona verde del indicador) cada metro vale el doble. Pasados 80° te vas de espaldas.</p></section>
@@ -470,7 +470,22 @@ const LEVELS=[
    goals:[{label:'Mortal atrás',ev:'backflip',min:1},{label:'Truco Superman',ev:'superman'},{label:'Consigue 8.000 puntos',ev:'points',min:8000}]},
   {name:'Final Supercross', time:240, start:{x:0,z:-82,yaw:0},
    build(){ gap(0,-50,0,9,13,3.9,22,24,15); gap(-34,55,180,7,9,3.0,16,18,12); addRamp(28,55,180,6,kicker(7,2.4),'wood'); addRamp(28,-20,0,8,table(9,6,11,2.2),'dirt'); },
-   goals:[{label:'Mortal adelante',ev:'frontflip',min:1},{label:'Combo × 4',ev:'combo',min:4},{label:'Consigue 25.000 puntos',ev:'points',min:25000}]}
+   goals:[{label:'Mortal adelante',ev:'frontflip',min:1},{label:'Combo × 4',ev:'combo',min:4},{label:'Consigue 25.000 puntos',ev:'points',min:25000}]},
+  {name:'Estilo libre', time:220, start:{x:0,z:-80,yaw:0},
+   build(){ addRamp(0,-45,0,8,table(8,6,10,1.8),'dirt'); addRamp(0,10,0,8,table(9,7,11,2.2),'dirt'); addRamp(-30,45,180,8,table(9,7,11,2.0),'dirt'); addRamp(-30,-10,180,8,table(8,6,10,1.8),'dirt'); addRamp(25,-20,0,6,kicker(6,1.8),'wood'); addRamp(25,40,180,6,kicker(6,1.8),'wood'); },
+   goals:[{label:'Truco Nac-nac',ev:'nacnac'},{label:'3 aterrizajes perfectos',ev:'perfect',count:3},{label:'Combo × 5',ev:'combo',min:5}]},
+  {name:'Doble mortal', time:240, start:{x:0,z:-82,yaw:0},
+   build(){ gap(0,-58,0,9,14,4.8,24,26,15); addRamp(-32,-40,0,6,kicker(8,2.6),'wood'); addRamp(-32,50,180,8,table(9,7,11,2.4),'dirt'); addRamp(28,55,180,6,kicker(7,2.4),'wood'); },
+   goals:[{label:'Doble mortal atrás',ev:'backflip',min:2},{label:'Aterrizaje en caballito',ev:'landwheelie'},{label:'Consigue 40.000 puntos',ev:'points',min:40000}]},
+  {name:'Maratón de caballito', time:240, start:{x:0,z:-80,yaw:0},
+   build(){ addRamp(-25,-30,0,6,kicker(5,1.4),'wood'); addRamp(-25,30,0,8,table(8,6,10,1.6),'dirt'); addRamp(15,40,180,6,kicker(5,1.4),'wood'); },
+   goals:[{label:'Caballito de 70 m',ev:'wheelie',min:70},{label:'20 m en punto de equilibrio',ev:'balance',min:20},{label:'Stoppie de 6 m',ev:'stoppie',min:6}]},
+  {name:'Triple gap', time:260, start:{x:0,z:-82,yaw:0},
+   build(){ gap(0,-60,0,8,11,3.6,18,20,13); gap(-32,60,180,8,11,3.6,18,20,13); gap(28,-10,0,7,10,3.2,16,18,12); },
+   goals:[{label:'Doble mortal adelante',ev:'frontflip',min:2},{label:'5 saltos de más de 1,5 s',ev:'jump',min:1.5,count:5},{label:'Combo × 6',ev:'combo',min:6}]},
+  {name:'Rey del estadio', time:300, start:{x:0,z:-84,yaw:0},
+   build(){ gap(0,-62,0,9,14,4.8,24,26,15); gap(-32,62,180,8,12,4.0,20,22,13); addRamp(28,-40,0,8,table(9,7,11,2.4),'dirt'); addRamp(28,10,0,6,kicker(6,2.0),'wood'); addRamp(28,60,180,6,kicker(7,2.6),'wood'); },
+   goals:[{label:'Doble mortal atrás',ev:'backflip',min:2},{label:'Combo × 8',ev:'combo',min:8},{label:'Consigue 80.000 puntos',ev:'points',min:80000}]}
 ];
 
 /* ---------------- wheelie strip ---------------- */
