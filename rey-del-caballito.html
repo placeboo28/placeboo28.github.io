@@ -977,7 +977,10 @@ function updateHUD(){
 
 /* ---------------- levels ---------------- */
 let levelIdx=0, unlocked=1, lvl=null, levelTime=0, levelDone=false, levelFailed=false, halted=false, selLevel=0, crowdCheer=0, screenT=0, screenKey='';
-try{ unlocked=clamp(+localStorage.getItem('rdc-unlocked')||1,1,LEVELS.length); }catch(e){}
+try{ unlocked=clamp(+localStorage.getItem('rdc-unlocked')||1,1,LEVELS.length);
+  // Antes el juego tenía 5 niveles: quien ya llegó al 5 desbloquea el 6 nuevo
+  if(!localStorage.getItem('rdc-v10')){ if(unlocked>=5) unlocked=Math.max(unlocked,6); localStorage.setItem('rdc-v10','1'); localStorage.setItem('rdc-unlocked',unlocked); }
+}catch(e){}
 selLevel=unlocked-1;
 const elGoals=$('goals'), elLvl=$('lvl'), elTime=$('ltime');
 function cheer(v){ crowdCheer=Math.max(crowdCheer,v); }
