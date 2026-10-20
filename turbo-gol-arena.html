@@ -77,8 +77,8 @@ kbd{font-family:var(--font-ui);font-size:12px;border:1px solid var(--line);borde
 
 .mypts{position:fixed;top:calc(env(safe-area-inset-top,0px) + 62px);left:50%;transform:translateX(-50%);z-index:5;font-weight:700;font-size:12px;letter-spacing:.14em;color:var(--muted);background:rgba(17,23,38,.8);border:1px solid var(--line);padding:4px 12px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .mypts b{color:var(--boost);font-size:16px;margin-left:8px}
-#pop{position:fixed;left:0;right:0;bottom:26%;text-align:center;font-family:var(--font-display);font-size:clamp(26px,6vw,44px);color:var(--boost);pointer-events:none;z-index:6;opacity:0;text-shadow:0 4px 0 rgba(0,0,0,.4)}
-#pop.show{animation:pop 1.4s ease-out forwards}
+#pop,#pop2{position:fixed;left:0;right:0;bottom:26%;text-align:center;font-family:var(--font-display);font-size:clamp(26px,6vw,44px);color:var(--boost);pointer-events:none;z-index:6;opacity:0;text-shadow:0 4px 0 rgba(0,0,0,.4)}
+#pop.show,#pop2.show{animation:pop 1.4s ease-out forwards}
 @keyframes pop{0%{opacity:0;transform:translateY(20px) scale(.8)}15%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0;transform:translateY(-30px)}}
 #feed{position:fixed;left:16px;top:calc(env(safe-area-inset-top,0px) + 100px);z-index:5;display:flex;flex-direction:column;gap:6px;pointer-events:none;max-width:calc(100% - 32px)}
 #feed div{background:rgba(17,23,38,.85);border-left:4px solid var(--c);padding:5px 10px;font-size:13px;font-weight:600}
@@ -115,7 +115,16 @@ kbd{font-family:var(--font-ui);font-size:12px;border:1px solid var(--line);borde
 .carBtn[aria-pressed="true"]{border-color:var(--boost);background:rgba(255,210,63,.08)}
 .carBtn:focus-visible{outline:3px solid var(--boost);outline-offset:2px}
 @media (max-width:520px){.garage{grid-template-columns:1fr}#preview{height:150px}.carGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (prefers-reduced-motion:reduce){#pop.show{animation:none;opacity:1}}
+#pop2{bottom:12%}
+#divider{display:none}
+body.split #divider{display:block;position:fixed;left:0;right:0;top:calc(50% - 2px);height:4px;background:var(--line);z-index:4}
+body.split #pop{bottom:auto;top:30%}
+body.split #b1{bottom:calc(50% + 14px);width:96px;height:96px}
+body.split #boost2{width:96px;height:96px}
+body.split #b1 .val,body.split #boost2 .val{font-size:26px}
+body.split #touch{display:none}
+body.split #msg{top:calc(50% - .6em)}
+@media (prefers-reduced-motion:reduce){#pop.show,#pop2.show{animation:none;opacity:1}}
 @media (max-width:520px){
   .team{font-size:24px;padding:5px 12px}
   .clock{font-size:19px;min-width:60px;padding:7px 10px}
@@ -132,13 +141,19 @@ kbd{font-family:var(--font-ui);font-size:12px;border:1px solid var(--line);borde
   <div class="clock" id="clock">3:00</div>
   <div class="team orange"><b id="sOrange">0</b><span class="tag">NARANJA</span></div>
 </div>
-<div class="mypts">TUS PUNTOS<b id="myPts">0</b></div>
+<div class="mypts"><span id="ptsLbl">TUS PUNTOS</span><b id="myPts">0</b><span id="p2pts" hidden> · J2<b id="myPts2">0</b></span></div>
 <div id="feed" aria-live="polite"></div>
 <div id="msg" class="hide"></div>
 <div id="pop"></div>
-<div class="boost" aria-label="Turbo">
+<div id="pop2"></div>
+<div id="divider"></div>
+<div class="boost" id="b1" aria-label="Turbo">
   <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="rgba(17,23,38,.8)" stroke="#26304a" stroke-width="9"/><circle id="ring" cx="50" cy="50" r="42" fill="none" stroke="#ffd23f" stroke-width="9" stroke-linecap="butt" stroke-dasharray="264" stroke-dashoffset="176"/></svg>
   <div class="val"><div><b id="boostNum">33</b><span>TURBO</span></div></div>
+</div>
+<div class="boost" id="boost2" aria-label="Turbo del jugador 2" hidden>
+  <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="rgba(17,23,38,.8)" stroke="#26304a" stroke-width="9"/><circle id="ring2" cx="50" cy="50" r="42" fill="none" stroke="#ffd23f" stroke-width="9" stroke-linecap="butt" stroke-dasharray="264" stroke-dashoffset="176"/></svg>
+  <div class="val"><div><b id="boostNum2">33</b><span>J2 TURBO</span></div></div>
 </div>
 <div class="hint" id="hint"><b>C</b> turbo · <b>M</b> cámara: <span id="camName">balón</span> · <b>P</b> pausa · <b>N</b> sonido</div>
 <button id="pauseBtn" type="button" hidden>Pausa</button>
@@ -159,7 +174,26 @@ kbd{font-family:var(--font-ui);font-size:12px;border:1px solid var(--line);borde
     <div class="stats" id="stats" hidden></div>
     <p class="newcars" id="newCars" hidden></p>
     <div class="row">
+      <label>Jugadores</label>
+      <div class="chips" id="playersChips">
+        <button class="chip" type="button" id="pl-1" data-v="1" aria-pressed="true">1 jugador</button>
+        <button class="chip" type="button" id="pl-2" data-v="2" aria-pressed="false">2 jugadores</button>
+      </div>
+    </div>
+    <div class="row" id="teamsRow" hidden>
+      <label>Equipos</label>
+      <div class="chips" id="teamsChips">
+        <button class="chip" type="button" id="tm-vs" data-v="vs" aria-pressed="true">Uno contra otro</button>
+        <button class="chip" type="button" id="tm-coop" data-v="coop" aria-pressed="false">Juntos contra la CPU</button>
+      </div>
+      <p class="tip">Pantalla partida: J1 arriba, J2 abajo. Si jugáis juntos en 1v1, el partido pasa a 2v2.</p>
+    </div>
+    <div class="row">
       <label>Garaje · <span id="gCount"></span></label>
+      <div class="chips" id="slotChips" hidden>
+        <button class="chip" type="button" id="sl-1" data-v="0" aria-pressed="true">Coche de J1</button>
+        <button class="chip" type="button" id="sl-2" data-v="1" aria-pressed="false">Coche de J2</button>
+      </div>
       <div class="garage">
         <canvas id="preview" aria-label="Vista del coche"></canvas>
         <div class="ginfo">
@@ -204,6 +238,7 @@ kbd{font-family:var(--font-ui);font-size:12px;border:1px solid var(--line);borde
       <dt><kbd>C</kbd></dt><dd>Turbo. Recoge los círculos amarillos para recargar</dd>
       <dt>En el aire</dt><dd><kbd>W</kbd> sube el morro, <kbd>S</kbd> lo baja. Turbo + morro arriba = ¡volar!</dd>
       <dt>Paredes</dt><dd>Conduce de frente contra una pared para subirla. Puedes llegar hasta el techo si vas rápido; si frenas, te caes</dd>
+      <dt>Jugador 2</dt><dd><kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd> conducir · <kbd>Enter</kbd> o <kbd>Ctrl</kbd> derecho saltar · <kbd>Shift</kbd> derecho turbo. Con mando también vale</dd>
       <dt><kbd>M</kbd></dt><dd>Cambiar cámara: mirando al balón o detrás del coche</dd>
     </dl>
     <p class="tip">Cada coche se desbloquea completando su misión; el progreso se guarda en este navegador. Puntos: gol 100 (+30 si es aéreo) · asistencia 50 · parada 50 · tiro a puerta 20. Tu coche lleva un rombo blanco encima. Marcas en la portería naranja. Si hay empate al final, gol de oro. También funciona con mando de consola y en pantalla táctil.</p>
@@ -430,12 +465,19 @@ function makeCar(team,name,human,model){
 const NAMES={blue:['Rayo','Chispa','Turbo'],orange:['Tornado','Bólido','Cometa','Trueno']};
 let cars=[],player=null;
 const randModel=()=>MODELS[Math.floor(Math.random()*MODELS.length)];
-function buildTeams(n,myModel){
+let players=[];
+function buildTeams(n,m1,two,coop,m2){
   cars.forEach(c=>scene.remove(c.mesh));
-  player=makeCar('blue','Tú',true,myModel||MODELS[0]);
-  cars=[player];
-  for(let i=1;i<n;i++)cars.push(makeCar('blue',NAMES.blue[i-1],false,randModel()));
-  for(let i=0;i<n;i++)cars.push(makeCar('orange',NAMES.orange[i],false,randModel()));
+  player=makeCar('blue',two?'J1':'Tú',true,m1||MODELS[0]);player.pid=0;
+  cars=[player];players=[player];
+  let p2=null;
+  if(two){p2=makeCar(coop?'blue':'orange','J2',true,m2||MODELS[0]);p2.pid=1;p2.tag.material.color.setHex(COL.boost);players.push(p2);}
+  if(p2&&coop)cars.push(p2);
+  const nb=n-cars.length;
+  for(let i=0;i<nb;i++)cars.push(makeCar('blue',NAMES.blue[i],false,randModel()));
+  let no=n;
+  if(p2&&!coop){cars.push(p2);no--;}
+  for(let i=0;i<no;i++)cars.push(makeCar('orange',NAMES.orange[i],false,randModel()));
 }
 buildTeams(1);
 
@@ -489,25 +531,44 @@ addEventListener('keydown',e=>{
 addEventListener('keyup',e=>{keys[e.code]=false;});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
 
+let gpads=[];
 function pollPad(){
-  pad={throttle:0,steer:0,jump:false,boost:false};
+  gpads=[];
   const list=navigator.getGamepads?navigator.getGamepads():[];
-  let gp=null;for(const g of list){if(g){gp=g;break;}}
-  if(!gp)return;
-  const dz=v=>Math.abs(v)<.18?0:v;
-  const b=i=>gp.buttons[i]?gp.buttons[i]:{pressed:false,value:0};
-  pad.steer=dz(gp.axes[0]||0);
-  pad.throttle=clamp((b(7).value||0)-(b(6).value||0)-dz(gp.axes[1]||0)*(player.onGround?0:1),-1,1);
-  pad.jump=b(0).pressed;pad.boost=b(1).pressed||b(2).pressed;
-  const start=b(9).pressed;
+  let start=false;
+  for(const gp of list){
+    if(!gp)continue;
+    const dz=v=>Math.abs(v)<.18?0:v;
+    const b=i=>gp.buttons[i]?gp.buttons[i]:{pressed:false,value:0};
+    gpads.push({steer:dz(gp.axes[0]||0),stickY:dz(gp.axes[1]||0),trig:(b(7).value||0)-(b(6).value||0),jump:b(0).pressed,boost:b(1).pressed||b(2).pressed});
+    if(b(9).pressed)start=true;
+  }
   if(start&&!padPrev.start){if(game.state==='menu'||game.state==='over')startMatch();else togglePause();}
   padPrev={start};
 }
-function playerInput(){
-  const k=keys;
-  let throttle=((k.KeyW||k.ArrowUp)?1:0)-((k.KeyS||k.ArrowDown)?1:0)+pad.throttle-touch.y;
-  let steer=((k.KeyD||k.ArrowRight)?1:0)-((k.KeyA||k.ArrowLeft)?1:0)+pad.steer+touch.x;
-  return {throttle:clamp(throttle,-1,1),steer:clamp(steer,-1,1),jump:!!(k.Space||pad.jump||touch.jump),boost:!!(k.KeyC||k.ShiftLeft||k.ShiftRight||pad.boost||touch.boost)};
+function padFor(pid){
+  if(!game.two)return pid===0?gpads[0]:null;
+  if(gpads.length>=2)return gpads[pid];
+  return pid===1?gpads[0]:null;
+}
+function playerInput(c){
+  const k=keys,pid=c.pid||0;
+  let t=0,s=0,j=false,bo=false;
+  if(!game.two){
+    t=((k.KeyW||k.ArrowUp)?1:0)-((k.KeyS||k.ArrowDown)?1:0);
+    s=((k.KeyD||k.ArrowRight)?1:0)-((k.KeyA||k.ArrowLeft)?1:0);
+    j=!!k.Space;bo=!!(k.KeyC||k.ShiftLeft||k.ShiftRight);
+  }else if(pid===0){
+    t=(k.KeyW?1:0)-(k.KeyS?1:0);s=(k.KeyD?1:0)-(k.KeyA?1:0);
+    j=!!k.Space;bo=!!(k.KeyC||k.ShiftLeft);
+  }else{
+    t=(k.ArrowUp?1:0)-(k.ArrowDown?1:0);s=(k.ArrowRight?1:0)-(k.ArrowLeft?1:0);
+    j=!!(k.Enter||k.NumpadEnter||k.ControlRight||k.Numpad0);bo=!!(k.ShiftRight||k.Numpad1||k.Slash);
+  }
+  const g=padFor(pid);
+  if(g){t+=g.trig-g.stickY*(c.onGround?0:1);s+=g.steer;j=j||g.jump;bo=bo||g.boost;}
+  if(pid===0){t-=touch.y;s+=touch.x;j=j||touch.jump;bo=bo||touch.boost;}
+  return {throttle:clamp(t,-1,1),steer:clamp(s,-1,1),jump:j,boost:bo};
 }
 
 /* Touch */
@@ -658,7 +719,7 @@ function syncCar(c,dt){
   c.mesh.position.copy(c.pos).add(c.visOff);
   c.mesh.quaternion.copy(c.dispQ);
   if(c.flip>0){const k=1-c.flip/.55;c.mesh.rotateX(c.flipF*k*Math.PI*2);c.mesh.rotateZ(c.flipS*k*Math.PI*2);}
-  const steerVis=c===player?-playerInput().steer*.4:0;
+  const steerVis=c.human&&c.lastInp?-c.lastInp.steer*.4:0;
   c.front.forEach(w=>w.rotation.y=steerVis);
   c.flame.visible=c.boosting;
   if(c.boosting){c.flame.scale.set(1,.8+Math.random()*.5,1);
@@ -789,7 +850,7 @@ function aiInput(c,dt){
 }
 
 /* ---------- Game flow ---------- */
-const game={state:'menu',blue:0,orange:0,time:180,duration:180,overtime:false,ot:0,countdown:0,lastCount:0,goalTimer:0,difficulty:'normal',mode:1,clock:0,prev:null,ballCam:true};
+const game={state:'menu',blue:0,orange:0,time:180,duration:180,overtime:false,ot:0,countdown:0,lastCount:0,goalTimer:0,difficulty:'normal',mode:1,clock:0,prev:null,ballCam:true,two:false,coop:false,selPlayers:1,selCoop:false};
 function toggleCam(){game.ballCam=!game.ballCam;$('camName').textContent=game.ballCam?'balón':'coche';}
 const $=id=>document.getElementById(id);
 const msgEl=$('msg');let msgTimer=0;
@@ -798,7 +859,7 @@ function hideMsg(){msgEl.classList.add('hide');}
 const teamCss=t=>t==='blue'?'var(--blue)':'var(--orange)';
 
 /* Points */
-const popEl=$('pop');let popT=null;
+const popEls=[$('pop'),$('pop2')],popTs=[null,null];
 function award(c,pts,label,stat){
   c.pts+=pts;if(stat)c[stat]++;
   const f=$('feed'),row=document.createElement('div');
@@ -807,10 +868,11 @@ function award(c,pts,label,stat){
   f.prepend(row);while(f.children.length>4)f.lastChild.remove();
   setTimeout(()=>row.remove(),3500);
   if(c.human){
-    $('myPts').textContent=c.pts;
-    popEl.textContent='+'+pts+' '+label;
-    popEl.classList.remove('show');void popEl.offsetWidth;popEl.classList.add('show');
-    clearTimeout(popT);popT=setTimeout(()=>popEl.classList.remove('show'),1400);
+    const pid=c.pid||0,pe=popEls[pid];
+    $(pid?'myPts2':'myPts').textContent=c.pts;
+    pe.textContent=(game.two?c.name+' ':'')+'+'+pts+' '+label;
+    pe.classList.remove('show');void pe.offsetWidth;pe.classList.add('show');
+    clearTimeout(popTs[pid]);popTs[pid]=setTimeout(()=>pe.classList.remove('show'),1400);
     beep(990,.12,'sine',.07,300);
   }
 }
@@ -832,12 +894,17 @@ function kickoff(){
 }
 function startMatch(){
   initAudio();
-  buildTeams(game.mode,modelById(equipped));
+  game.two=game.selPlayers===2;game.coop=game.two&&game.selCoop;
+  const n=game.coop?Math.max(2,game.mode):game.mode;
+  buildTeams(n,modelById(equipped),game.two,game.coop,modelById(equipped2));
+  document.body.classList.toggle('split',game.two);
+  $('ptsLbl').textContent=game.two?'J1':'TUS PUNTOS';$('p2pts').hidden=!game.two;$('myPts2').textContent='0';
+  $('boost2').hidden=!game.two;$('hint').hidden=game.two||isTouch;
   game.blue=game.orange=0;game.time=game.duration;game.overtime=false;game.ot=0;game.clock=0;
   $('menu').hidden=true;$('result').hidden=true;$('stats').hidden=true;$('newCars').hidden=true;
   $('feed').innerHTML='';$('myPts').textContent='0';
   updateScore();kickoff();
-  camPos.copy(player.pos).add(new V(0,5,-12));
+  players.forEach((p,i)=>{const s=p.team==='blue'?1:-1;cams[i].pos.copy(p.pos).add(new V(0,5,-12*s));cams[i].look.copy(p.pos);cams[i].hf.set(0,0,s);});
 }
 function updateScore(){$('sBlue').textContent=game.blue;$('sOrange').textContent=game.orange;}
 function scored(team){
@@ -853,16 +920,18 @@ function scored(team){
     if(ball.lastY>A.gh+1){sc.aerials++;if(sc.human)award(sc,30,'GOL AÉREO');}
     const as=ball.prev;
     if(as&&as!==sc&&as.team===team&&game.clock-ball.prevT<6)award(as,50,'ASISTENCIA','assists');
-    sub=sc.human?'¡MARCAS TÚ! +100':'MARCA '+sc.name.toUpperCase();
+    sub=sc.human?(game.two?'¡GOL DE '+sc.name+'! +100':'¡MARCAS TÚ! +100'):'MARCA '+sc.name.toUpperCase();
   }else sub='GOL EN PROPIA';
-  showMsg((team==='blue'?'¡GOL!':'GOL NARANJA')+'<small>'+sub+'</small>',teamCss(team),0);
+  const vs=game.two&&!game.coop;
+  showMsg((team==='blue'?(vs?'¡GOL AZUL!':'¡GOL!'):(vs?'¡GOL NARANJA!':'GOL NARANJA'))+'<small>'+sub+'</small>',teamCss(team),0);
   goalSound();
 }
 function endMatch(){
   game.state='over';hideMsg();
   const r=$('result');r.hidden=false;
   const w=game.blue>game.orange,win=w?'blue':'orange';
-  r.textContent=(w?'¡Gana tu equipo ':'Gana el equipo naranja ')+game.blue+' – '+game.orange;
+  const vs=game.two&&!game.coop;
+  r.textContent=(vs?(w?'¡Gana J1! ':'¡Gana J2! '):(w?'¡Gana tu equipo ':'Gana el equipo naranja '))+game.blue+' – '+game.orange;
   r.style.color=teamCss(win);
   const mvp=cars.filter(c=>c.team===win).sort((a,b)=>b.pts-a.pts)[0];
   const rows=['blue','orange'].flatMap(t=>cars.filter(c=>c.team===t).sort((a,b)=>b.pts-a.pts));
@@ -870,7 +939,7 @@ function endMatch(){
     rows.map(c=>`<tr class="${c.human?'me':''}"><td style="--c:${teamCss(c.team)}">${c.name}${c===mvp?' ★ MVP':''}</td><td>${c.pts}</td><td>${c.goals}</td><td>${c.assists}</td><td>${c.saves}</td><td>${c.shots}</td></tr>`).join('')+
     '</tbody></table>';
   $('stats').hidden=false;
-  recordMatch(w);
+  recordMatch(players.some(p=>p.team===win),w&&!vs);
   $('playBtn').textContent='REVANCHA';
   $('menu').hidden=false;
 }
@@ -881,6 +950,9 @@ function togglePause(){
 
 function chips(groupId,cb){const g=$(groupId);g.addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;g.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed',c===b?'true':'false'));cb(b.dataset.v);});}
 chips('modeChips',v=>game.mode=+v);
+chips('playersChips',v=>{game.selPlayers=+v;const two=game.selPlayers===2;$('teamsRow').hidden=!two;$('slotChips').hidden=!two;if(!two)gslot=0;viewing=curEq();renderGarage();});
+chips('teamsChips',v=>{game.selCoop=v==='coop';renderGarage();});
+chips('slotChips',v=>{gslot=+v;viewing=curEq();renderGarage();});
 chips('diffChips',v=>game.difficulty=v);
 chips('timeChips',v=>game.duration=+v);
 $('playBtn').addEventListener('click',startMatch);
@@ -890,11 +962,13 @@ function fmt(s){s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+':'+String(s%
 /* ---------- Garage & missions ---------- */
 const SAVE_KEY='turbogol-garaje-v1';
 let prog={matches:0,wins:0,hardWins:0,goals:0,saves:0,shots:0,aerials:0,hatTricks:0,bestPts:0};
-let equipped='chispa',viewing='chispa';
-try{const d=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(d){Object.assign(prog,d.prog||{});if(d.equipped)equipped=d.equipped;}}catch(e){}
-function saveProg(){try{localStorage.setItem(SAVE_KEY,JSON.stringify({prog,equipped}));}catch(e){}}
+let equipped='chispa',equipped2='chispa',viewing='chispa',gslot=0;
+const curEq=()=>gslot?equipped2:equipped;
+try{const d=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(d){Object.assign(prog,d.prog||{});if(d.equipped)equipped=d.equipped;if(d.equipped2)equipped2=d.equipped2;}}catch(e){}
+function saveProg(){try{localStorage.setItem(SAVE_KEY,JSON.stringify({prog,equipped,equipped2}));}catch(e){}}
 const unlocked=m=>!m.mission||(prog[m.mission.key]||0)>=m.mission.need;
 if(!unlocked(modelById(equipped)))equipped='chispa';
+if(!unlocked(modelById(equipped2)))equipped2='chispa';
 viewing=equipped;
 
 const pvCanvas=$('preview');
@@ -914,7 +988,7 @@ function setPreview(m){
   if(!pv)return;
   if(pv.car)pv.sc.remove(pv.car);
   const locked=!unlocked(m);
-  pv.car=buildCarMesh(m,locked?0x2c3346:COL.blue,false).g;
+  pv.car=buildCarMesh(m,locked?0x2c3346:(gslot&&!game.selCoop?COL.orange:COL.blue),false).g;
   pv.sc.add(pv.car);
 }
 function renderPreview(dt){
@@ -929,8 +1003,9 @@ const STAT_LABELS=[['speed','Velocidad'],['turn','Giro'],['boost','Turbo'],['jum
 function renderGarage(){
   const m=modelById(viewing),locked=!unlocked(m);
   $('gName').textContent=m.name;
-  $('gTag').textContent=locked?'BLOQUEADO':(m.id===equipped?'EN USO':'DISPONIBLE');
-  $('gTag').className='gtag'+(locked?' lock':(m.id===equipped?' on':''));
+  const eq=curEq();
+  $('gTag').textContent=locked?'BLOQUEADO':(m.id===eq?(game.selPlayers===2?'EN USO · J'+(gslot+1):'EN USO'):'DISPONIBLE');
+  $('gTag').className='gtag'+(locked?' lock':(m.id===eq?' on':''));
   $('gDesc').textContent=m.desc;
   $('gStats').innerHTML=STAT_LABELS.map(([k,l])=>{const v=clamp((m.st[k]-.8)/.5,.08,1);return `<div class="bar"><span>${l}</span><i><b style="width:${Math.round(v*100)}%"></b></i></div>`;}).join('');
   const mi=$('gMission');
@@ -940,8 +1015,8 @@ function renderGarage(){
   }else mi.innerHTML='<b>Coche inicial.</b> Disponible desde el principio.';
   $('carGrid').innerHTML=MODELS.map(x=>{
     const lk=!unlocked(x);
-    const sub=lk?`${Math.min(prog[x.mission.key]||0,x.mission.need)}/${x.mission.need}`:(x.id===equipped?'En uso':'Listo');
-    return `<button type="button" class="carBtn${lk?' locked':''}${x.id===equipped?' eq':''}" id="car-${x.id}" data-id="${x.id}" aria-pressed="${x.id===viewing}"><span>${x.name}</span><small>${lk?'Bloqueado · ':''}${sub}</small></button>`;
+    const sub=lk?`${Math.min(prog[x.mission.key]||0,x.mission.need)}/${x.mission.need}`:(x.id===eq?'En uso':'Listo');
+    return `<button type="button" class="carBtn${lk?' locked':''}${x.id===eq?' eq':''}" id="car-${x.id}" data-id="${x.id}" aria-pressed="${x.id===viewing}"><span>${x.name}</span><small>${lk?'Bloqueado · ':''}${sub}</small></button>`;
   }).join('');
   const unl=MODELS.filter(unlocked).length;
   $('gCount').textContent=unl+' de '+MODELS.length+' coches';
@@ -951,19 +1026,21 @@ $('carGrid').addEventListener('click',e=>{
   const b=e.target.closest('.carBtn');if(!b)return;
   viewing=b.dataset.id;
   const m=modelById(viewing);
-  if(unlocked(m)){equipped=m.id;saveProg();}
+  if(unlocked(m)){if(gslot)equipped2=m.id;else equipped=m.id;saveProg();}
   renderGarage();
 });
 renderGarage();
 
-function recordMatch(won){
+function recordMatch(won,hardOk){
   const before=MODELS.filter(unlocked).map(m=>m.id);
   prog.matches++;
   if(won)prog.wins++;
-  if(won&&game.difficulty==='hard')prog.hardWins++;
-  prog.goals+=player.goals;prog.saves+=player.saves;prog.shots+=player.shots;prog.aerials+=player.aerials;
-  if(player.goals>=3)prog.hatTricks++;
-  prog.bestPts=Math.max(prog.bestPts,player.pts);
+  if(hardOk&&game.difficulty==='hard')prog.hardWins++;
+  players.forEach(p=>{
+    prog.goals+=p.goals;prog.saves+=p.saves;prog.shots+=p.shots;prog.aerials+=p.aerials;
+    if(p.goals>=3)prog.hatTricks++;
+    prog.bestPts=Math.max(prog.bestPts,p.pts);
+  });
   saveProg();
   const fresh=MODELS.filter(m=>unlocked(m)&&!before.includes(m.id));
   const nu=$('newCars');
@@ -997,22 +1074,25 @@ function updatePads(dt){
       if(c.pos.y>3||c.boost>=100)continue;
       if(Math.hypot(c.pos.x-p.x,c.pos.z-p.z)<(p.big?3.2:2.2)){
         c.boost=Math.min(100,c.boost+(p.big?100:12));p.active=false;p.orb.visible=false;p.t=p.big?10:4;
-        if(c===player)beep(p.big?660:880,.12,'sine',.08,p.big?300:0);
+        if(c.human)beep(p.big?660:880,.12,'sine',.08,p.big?300:0);
         break;
       }
     }
   }
 }
-const lastHF=new V(0,0,1),camUp=new V(0,1,0);
+const camera2=new THREE.PerspectiveCamera(70,1,0.1,600);
+const cams=[{cam:camera,pos:camPos,look:camLook,up:new V(0,1,0),hf:new V(0,0,1)},{cam:camera2,pos:new V(0,30,80),look:new V(0,2,0),up:new V(0,1,0),hf:new V(0,0,-1)}];
 function updateCamera(dt){
   if(game.state==='menu'){
     orbit+=dt*.07;camera.up.set(0,1,0);
     camera.position.set(Math.sin(orbit)*85,34,Math.cos(orbit)*105);camera.lookAt(0,2,0);
     return;
   }
-  const c=player;
+  players.forEach((c,i)=>followCam(c,cams[i],dt));
+}
+function followCam(c,k,dt){
   let want,look,upT=new V(0,1,0);
-  const hf=c.fwd.clone();hf.y=0;if(hf.lengthSq()<.01)hf.copy(lastHF);hf.normalize();lastHF.copy(hf);
+  const hf=c.fwd.clone();hf.y=0;if(hf.lengthSq()<.01)hf.copy(k.hf);hf.normalize();k.hf.copy(hf);
   if(game.ballCam&&ballMesh.visible){
     const d=ball.pos.clone().sub(c.pos);d.y=0;if(d.lengthSq()<.01)d.copy(hf);d.normalize();
     want=c.pos.clone().addScaledVector(d,-11.5).add(new V(0,4.8,0));
@@ -1029,11 +1109,30 @@ function updateCamera(dt){
   want.y=clamp(want.y,1.4,A.h-1);
   const zl=(Math.abs(want.x)<A.gw-1&&want.y<A.gh-1)?A.hl+A.gd-1:A.hl-1;
   want.z=clamp(want.z,-zl,zl);
-  camPos.lerp(want,1-Math.exp(-7*dt));camLook.lerp(look,1-Math.exp(-10*dt));
-  camUp.lerp(upT,1-Math.exp(-4*dt)).normalize();
-  camera.up.copy(camUp);
-  camera.position.copy(camPos);camera.lookAt(camLook);
-  const fov=c.boosting?80:70;camera.fov+=(fov-camera.fov)*Math.min(1,dt*5);camera.updateProjectionMatrix();
+  k.pos.lerp(want,1-Math.exp(-7*dt));k.look.lerp(look,1-Math.exp(-10*dt));
+  k.up.lerp(upT,1-Math.exp(-4*dt)).normalize();
+  const cam=k.cam;
+  cam.up.copy(k.up);
+  cam.position.copy(k.pos);cam.lookAt(k.look);
+  const fov=c.boosting?80:70;cam.fov+=(fov-cam.fov)*Math.min(1,dt*5);
+}
+function renderAll(){
+  const W=innerWidth,H=innerHeight;
+  if(game.two&&game.state!=='menu'&&players[1]){
+    const hh=Math.floor(H/2);
+    renderer.setScissorTest(true);
+    for(let i=0;i<2;i++){
+      const cam=cams[i].cam,y=i===0?H-hh:0;
+      cam.aspect=W/hh;cam.updateProjectionMatrix();
+      renderer.setViewport(0,y,W,hh);renderer.setScissor(0,y,W,hh);
+      renderer.render(scene,cam);
+    }
+    renderer.setScissorTest(false);
+    renderer.setViewport(0,0,W,H);
+  }else{
+    camera.aspect=W/H;camera.updateProjectionMatrix();
+    renderer.render(scene,camera);
+  }
 }
 
 function frame(now){
@@ -1048,7 +1147,7 @@ function frame(now){
   }
   if(st==='play'||st==='goal'){
     assignRoles();
-    const inputs=cars.map(c=>c.human?playerInput():(st==='play'?aiInput(c,dt):IDLE));
+    const inputs=cars.map(c=>c.human?(c.lastInp=playerInput(c)):(st==='play'?aiInput(c,dt):IDLE));
     physics(dt,inputs);
     updatePads(dt);
     if(st==='play'){
@@ -1066,7 +1165,7 @@ function frame(now){
     }
   }
   cars.forEach(c=>syncCar(c,dt));
-  if(player.tag)player.tag.rotation.y+=dt*3;
+  players.forEach(p=>{if(p.tag)p.tag.rotation.y+=dt*3;});
   ballMesh.position.copy(ball.pos);
   const hv=new V(ball.vel.x,0,ball.vel.z),sp=hv.length();
   if(sp>.01&&st!=='paused'){const ax=new V(0,1,0).cross(hv).normalize();ballMesh.rotateOnWorldAxis(ax,sp*dt/R);}
@@ -1079,9 +1178,10 @@ function frame(now){
   updateCamera(dt);
   const bst=Math.round(player.boost);
   boostNum.textContent=bst;ring.setAttribute('stroke-dashoffset',String(264-264*bst/100));
+  if(game.two&&players[1]){const b2=Math.round(players[1].boost);$('boostNum2').textContent=b2;$('ring2').setAttribute('stroke-dashoffset',String(264-264*b2/100));}
   if(game.overtime){clockEl.textContent='+'+fmt(game.ot);clockEl.classList.add('ot');}
   else{clockEl.textContent=fmt(game.state==='menu'?game.duration:game.time);clockEl.classList.remove('ot');}
-  renderer.render(scene,camera);
+  renderAll();
   requestAnimationFrame(frame);
 }
 // Opening scene: kickoff positions visible behind the menu
