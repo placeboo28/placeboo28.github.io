@@ -215,7 +215,7 @@ body.split #msg{top:calc(50% - .6em)}
       <div class="admin">
         <button class="adminBtn" type="button" id="adminBtn">Admin</button>
         <form class="adminForm" id="adminForm" hidden>
-          <input id="adminPass" type="password" placeholder="Contraseña" autocomplete="off" aria-label="Contraseña de admin">
+          <input id="adminPass" type="password" inputmode="numeric" placeholder="Contraseña" autocomplete="off" aria-label="Contraseña de admin">
           <button type="submit" id="adminGo">Entrar</button>
         </form>
         <span class="adminMsg" id="adminMsg" aria-live="polite"></span>
@@ -1068,7 +1068,7 @@ $('adminBtn').addEventListener('click',()=>{
 $('adminForm').addEventListener('submit',e=>{
   e.preventDefault();
   const inp=$('adminPass'),msg=$('adminMsg');
-  if(hashPass(inp.value)===1035863333){
+  if(hashPass(inp.value)===2085878340){
     prog.admin=true;saveProg();
     $('adminForm').hidden=true;inp.value='';
     msg.textContent='¡Todos los coches desbloqueados!';msg.style.color='#7dff7a';
