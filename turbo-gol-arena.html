@@ -114,6 +114,14 @@ kbd{font-family:var(--font-ui);font-size:12px;border:1px solid var(--line);borde
 .carBtn.eq{border-color:var(--blue)}
 .carBtn[aria-pressed="true"]{border-color:var(--boost);background:rgba(255,210,63,.08)}
 .carBtn:focus-visible{outline:3px solid var(--boost);outline-offset:2px}
+.admin{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.adminBtn,.adminForm button{font:inherit;font-weight:700;font-size:13px;letter-spacing:.08em;color:var(--muted);background:transparent;border:1px solid var(--line);padding:6px 12px;cursor:pointer}
+.adminBtn.on{color:#7dff7a;border-color:#7dff7a}
+.adminForm{display:flex;gap:6px;flex:1 1 220px;min-width:0}
+.adminForm input{font:inherit;font-size:14px;flex:1;min-width:0;background:#0b1020;color:var(--ink);border:1px solid var(--line);padding:6px 10px}
+.adminForm button{color:var(--ink)}
+.adminBtn:focus-visible,.adminForm input:focus-visible,.adminForm button:focus-visible{outline:2px solid var(--boost);outline-offset:2px}
+.adminMsg{font-size:13px;font-weight:600}
 @media (max-width:520px){.garage{grid-template-columns:1fr}#preview{height:150px}.carGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 #pop2{bottom:12%}
 #divider{display:none}
@@ -204,6 +212,14 @@ body.split #msg{top:calc(50% - .6em)}
         </div>
       </div>
       <div class="carGrid" id="carGrid"></div>
+      <div class="admin">
+        <button class="adminBtn" type="button" id="adminBtn">Admin</button>
+        <form class="adminForm" id="adminForm" hidden>
+          <input id="adminPass" type="password" placeholder="Contraseña" autocomplete="off" aria-label="Contraseña de admin">
+          <button type="submit" id="adminGo">Entrar</button>
+        </form>
+        <span class="adminMsg" id="adminMsg" aria-live="polite"></span>
+      </div>
     </div>
     <div class="row">
       <label>Modo</label>
@@ -520,6 +536,7 @@ const touch={x:0,y:0,jump:false,boost:false};
 let pad={throttle:0,steer:0,jump:false,boost:false};
 let padPrev={start:false};
 addEventListener('keydown',e=>{
+  if(e.target&&e.target.tagName==='INPUT')return;
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
   keys[e.code]=true;
   if(e.repeat)return;
@@ -966,7 +983,7 @@ let equipped='chispa',equipped2='chispa',viewing='chispa',gslot=0;
 const curEq=()=>gslot?equipped2:equipped;
 try{const d=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(d){Object.assign(prog,d.prog||{});if(d.equipped)equipped=d.equipped;if(d.equipped2)equipped2=d.equipped2;}}catch(e){}
 function saveProg(){try{localStorage.setItem(SAVE_KEY,JSON.stringify({prog,equipped,equipped2}));}catch(e){}}
-const unlocked=m=>!m.mission||(prog[m.mission.key]||0)>=m.mission.need;
+const unlocked=m=>prog.admin||!m.mission||(prog[m.mission.key]||0)>=m.mission.need;
 if(!unlocked(modelById(equipped)))equipped='chispa';
 if(!unlocked(modelById(equipped2)))equipped2='chispa';
 viewing=equipped;
@@ -1029,6 +1046,39 @@ $('carGrid').addEventListener('click',e=>{
   if(unlocked(m)){if(gslot)equipped2=m.id;else equipped=m.id;saveProg();}
   renderGarage();
 });
+function hashPass(t){let h=5381;for(const ch of t.trim().toUpperCase())h=((h*33)^ch.charCodeAt(0))>>>0;return h;}
+function renderAdmin(){
+  const b=$('adminBtn');
+  b.textContent=prog.admin?'Admin activo · Salir':'Admin';
+  b.classList.toggle('on',!!prog.admin);
+}
+$('adminBtn').addEventListener('click',()=>{
+  const msg=$('adminMsg');
+  if(prog.admin){
+    prog.admin=false;saveProg();
+    if(!unlocked(modelById(equipped)))equipped='chispa';
+    if(!unlocked(modelById(equipped2)))equipped2='chispa';
+    viewing=curEq();saveProg();
+    msg.textContent='Modo admin desactivado.';msg.style.color='var(--muted)';
+    renderAdmin();renderGarage();return;
+  }
+  const f=$('adminForm');f.hidden=!f.hidden;msg.textContent='';
+  if(!f.hidden)$('adminPass').focus();
+});
+$('adminForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const inp=$('adminPass'),msg=$('adminMsg');
+  if(hashPass(inp.value)===1035863333){
+    prog.admin=true;saveProg();
+    $('adminForm').hidden=true;inp.value='';
+    msg.textContent='¡Todos los coches desbloqueados!';msg.style.color='#7dff7a';
+    renderAdmin();renderGarage();
+  }else{
+    msg.textContent='Contraseña incorrecta.';msg.style.color='var(--orange)';
+    inp.select();
+  }
+});
+renderAdmin();
 renderGarage();
 
 function recordMatch(won,hardOk){
