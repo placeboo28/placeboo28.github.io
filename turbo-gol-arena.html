@@ -253,6 +253,7 @@ body.split #msg{top:calc(50% - .6em)}
       <dt><kbd>Espacio</kbd></dt><dd>Saltar. Pulsa otra vez en el aire para doble salto; con una dirección pulsada haces un esquive</dd>
       <dt><kbd>C</kbd></dt><dd>Turbo. Recoge los círculos amarillos para recargar</dd>
       <dt>En el aire</dt><dd><kbd>W</kbd> sube el morro, <kbd>S</kbd> lo baja. Turbo + morro arriba = ¡volar!</dd>
+      <dt>Explotar</dt><dd>Choca contra un rival a toda velocidad (cuando salen rayas blancas detrás de tu coche) y explota. Vuelve a salir a los 3 segundos. +15 puntos</dd>
       <dt>Paredes</dt><dd>Conduce de frente contra una pared para subirla. Puedes llegar hasta el techo si vas rápido; si frenas, te caes</dd>
       <dt>Jugador 2</dt><dd><kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd> conducir · <kbd>Enter</kbd> o <kbd>Ctrl</kbd> derecho saltar · <kbd>Shift</kbd> derecho turbo. Con mando también vale</dd>
       <dt><kbd>M</kbd></dt><dd>Cambiar cámara: mirando al balón o detrás del coche</dd>
@@ -476,7 +477,7 @@ function makeCar(team,name,human,model){
   if(human){tag=new THREE.Mesh(new THREE.OctahedronGeometry(.7),new THREE.MeshBasicMaterial({color:0xffffff}));tag.position.set(0,4.4,0);g.add(tag);}
   scene.add(g);
   return {team,name,human:!!human,model,st:model.st,tag,mesh:g,front:fronts,flame,pos:new V(),vel:new V(),up:new V(0,1,0),fwd:new V(0,0,1),surf:0,visOff:new V(),dispQ:new THREE.Quaternion(),snap:true,onGround:true,canDouble:false,airTime:0,boost:33,flip:0,flipF:0,flipS:0,prevJump:true,boosting:false,
-    pts:0,goals:0,assists:0,saves:0,shots:0,aerials:0,jcd:0,role:'attack'};
+    pts:0,goals:0,assists:0,saves:0,shots:0,aerials:0,demos:0,dead:0,jcd:0,role:'attack'};
 }
 const NAMES={blue:['Rayo','Chispa','Turbo'],orange:['Tornado','Bólido','Cometa','Trueno']};
 let cars=[],player=null;
@@ -729,6 +730,9 @@ function updateCar(c,inp,dt,mul){
 }
 const _m=new THREE.Matrix4(),_q=new THREE.Quaternion();
 function syncCar(c,dt){
+  if(c.dead){c.mesh.visible=false;return;}
+  c.mesh.visible=true;
+  if(isSuper(c)&&Math.random()<.7){const back=c.fwd.clone().multiplyScalar(-1);spawn(c.pos.clone().addScaledVector(c.up,1.3).addScaledVector(back,3).add(new V((Math.random()-.5)*3,(Math.random()-.5)*.8,0)),back.clone().multiplyScalar(14),0xffffff,.35,.7,0);}
   _m.makeBasis(new V().crossVectors(c.up,c.fwd),c.up,c.fwd);
   _q.setFromRotationMatrix(_m);
   if(c.snap){c.dispQ.copy(_q);c.snap=false;}else c.dispQ.slerp(_q,1-Math.exp(-22*dt));
@@ -801,11 +805,32 @@ function carBall(c){
     touchBall(c,threat);
   }
 }
+const DEMO_SPEED=40;
+const isSuper=c=>c.vel.length()>DEMO_SPEED;
+function demolish(v,a){
+  v.dead=3;v.boosting=false;v.mesh.visible=false;
+  const at=v.pos.clone().addScaledVector(v.up,1.2);
+  for(let i=0;i<55;i++){const dir=new V(Math.random()-.5,Math.random()*.8+.1,Math.random()-.5).normalize();spawn(at,dir.multiplyScalar(10+Math.random()*22),[0xff5a1f,0xffd23f,0xffffff,COL[v.team]][i%4],.9+Math.random()*.5,1.8,-18);}
+  for(let i=0;i<14;i++)spawn(at.clone().add(new V((Math.random()-.5)*3,Math.random()*2,(Math.random()-.5)*3)),new V((Math.random()-.5)*4,4+Math.random()*4,(Math.random()-.5)*4),0x2a2f3d,1.6,2.6,0);
+  beep(70,.7,'sawtooth',.28,-40);beep(140,.35,'square',.14,-100);
+  if(game.state==='play'||game.state==='goal')award(a,15,'EXPLOSIÓN','demos');
+  if(v.human){const pe=popEls[v.pid||0];pe.textContent=(game.two?v.name+' ':'')+'¡TE HAN EXPLOTADO!';pe.classList.remove('show');void pe.offsetWidth;pe.classList.add('show');}
+}
+function respawn(c){
+  const s=c.team==='blue'?-1:1;
+  setCar(c,(Math.random()-.5)*30,s*(A.hl-12),c.team==='blue'?0:Math.PI);
+  for(let i=0;i<20;i++)spawn(c.pos.clone().add(new V(0,1,0)),new V((Math.random()-.5)*10,Math.random()*8,(Math.random()-.5)*10),COL[c.team],.6,1.2,-10);
+}
 function carPair(p,q){
+  if(p.dead||q.dead)return;
   const a=p.pos.clone().addScaledVector(p.up,1.1),b=q.pos.clone().addScaledVector(q.up,1.1);
   const d=b.sub(a);const dist=d.length(),min=4.2;
   if(dist>=min||dist<1e-4)return;
   const n=d.divideScalar(dist),push=(min-dist)/2;
+  if(p.team!==q.team){
+    if(isSuper(p)&&p.vel.dot(n)>p.vel.length()*.55){demolish(q,p);return;}
+    if(isSuper(q)&&-q.vel.dot(n)>q.vel.length()*.55){demolish(p,q);return;}
+  }
   p.pos.addScaledVector(n,-push);q.pos.addScaledVector(n,push);
   const rel=p.vel.clone().sub(q.vel).dot(n);
   if(rel>0){p.vel.addScaledVector(n,-rel*.9);q.vel.addScaledVector(n,rel*.9);}
@@ -895,7 +920,7 @@ function award(c,pts,label,stat){
 }
 
 const SLOTS={1:[[0,-42]],2:[[-18,-38],[18,-38]],3:[[-20,-38],[20,-38],[0,-50]],4:[[-22,-36],[22,-36],[0,-44],[0,-55]]};
-function setCar(c,x,z,yaw){c.pos.set(x,0,z);c.vel.set(0,0,0);c.up.set(0,1,0);c.fwd.set(Math.sin(yaw),0,Math.cos(yaw));c.surf=0;c.visOff.set(0,0,0);c.snap=true;c.onGround=true;c.flip=0;c.boost=33;c.prevJump=true;c.boosting=false;}
+function setCar(c,x,z,yaw){c.pos.set(x,0,z);c.vel.set(0,0,0);c.up.set(0,1,0);c.fwd.set(Math.sin(yaw),0,Math.cos(yaw));c.surf=0;c.visOff.set(0,0,0);c.snap=true;c.onGround=true;c.flip=0;c.boost=33;c.prevJump=true;c.boosting=false;c.dead=0;}
 function kickoff(){
   ball.pos.set(0,R,0);ball.vel.set(0,0,0);ballMesh.visible=true;
   ball.last=ball.prev=null;ball.lastT=ball.prevT=0;ball.shot=null;
@@ -952,8 +977,8 @@ function endMatch(){
   r.style.color=teamCss(win);
   const mvp=cars.filter(c=>c.team===win).sort((a,b)=>b.pts-a.pts)[0];
   const rows=['blue','orange'].flatMap(t=>cars.filter(c=>c.team===t).sort((a,b)=>b.pts-a.pts));
-  $('stats').innerHTML='<table><thead><tr><th>Jugador</th><th>Puntos</th><th>Goles</th><th>Asist.</th><th>Paradas</th><th>Tiros</th></tr></thead><tbody>'+
-    rows.map(c=>`<tr class="${c.human?'me':''}"><td style="--c:${teamCss(c.team)}">${c.name}${c===mvp?' ★ MVP':''}</td><td>${c.pts}</td><td>${c.goals}</td><td>${c.assists}</td><td>${c.saves}</td><td>${c.shots}</td></tr>`).join('')+
+  $('stats').innerHTML='<table><thead><tr><th>Jugador</th><th>Puntos</th><th>Goles</th><th>Asist.</th><th>Paradas</th><th>Tiros</th><th>Explos.</th></tr></thead><tbody>'+
+    rows.map(c=>`<tr class="${c.human?'me':''}"><td style="--c:${teamCss(c.team)}">${c.name}${c===mvp?' ★ MVP':''}</td><td>${c.pts}</td><td>${c.goals}</td><td>${c.assists}</td><td>${c.saves}</td><td>${c.shots}</td><td>${c.demos}</td></tr>`).join('')+
     '</tbody></table>';
   $('stats').hidden=false;
   recordMatch(players.some(p=>p.team===win),w&&!vs);
@@ -1111,9 +1136,9 @@ function physics(dt,inputs){
   const steps=3,h=dt/steps;
   const muls=cars.map(c=>c.human?1:SKILL[c.team==='orange'?game.difficulty:'normal'].mul);
   for(let s=0;s<steps;s++){
-    cars.forEach((c,i)=>updateCar(c,inputs[i],h,muls[i]));
+    cars.forEach((c,i)=>{if(!c.dead)updateCar(c,inputs[i],h,muls[i]);});
     carCars();
-    if(ballMesh.visible){updateBall(h);cars.forEach(carBall);}
+    if(ballMesh.visible){updateBall(h);cars.forEach(c=>{if(!c.dead)carBall(c);});}
   }
 }
 function updatePads(dt){
@@ -1121,7 +1146,7 @@ function updatePads(dt){
     if(!p.active){p.t-=dt;if(p.t<=0){p.active=true;p.orb.visible=true;}continue;}
     if(p.big){p.orb.position.y=2+Math.sin(performance.now()/300+p.x)*.3;}
     for(const c of cars){
-      if(c.pos.y>3||c.boost>=100)continue;
+      if(c.dead||c.pos.y>3||c.boost>=100)continue;
       if(Math.hypot(c.pos.x-p.x,c.pos.z-p.z)<(p.big?3.2:2.2)){
         c.boost=Math.min(100,c.boost+(p.big?100:12));p.active=false;p.orb.visible=false;p.t=p.big?10:4;
         if(c.human)beep(p.big?660:880,.12,'sine',.08,p.big?300:0);
@@ -1141,6 +1166,7 @@ function updateCamera(dt){
   players.forEach((c,i)=>followCam(c,cams[i],dt));
 }
 function followCam(c,k,dt){
+  if(c.dead){k.look.lerp(c.pos,1-Math.exp(-3*dt));k.cam.lookAt(k.look);return;}
   let want,look,upT=new V(0,1,0);
   const hf=c.fwd.clone();hf.y=0;if(hf.lengthSq()<.01)hf.copy(k.hf);hf.normalize();k.hf.copy(hf);
   if(game.ballCam&&ballMesh.visible){
@@ -1200,6 +1226,7 @@ function frame(now){
     const inputs=cars.map(c=>c.human?(c.lastInp=playerInput(c)):(st==='play'?aiInput(c,dt):IDLE));
     physics(dt,inputs);
     updatePads(dt);
+    cars.forEach(c=>{if(c.dead>0){c.dead-=dt;if(c.dead<=0)respawn(c);}});
     if(st==='play'){
       game.clock+=dt;
       if(ball.shot&&ball.vel.z*(ball.shot.team==='blue'?1:-1)<0)ball.shot=null;
