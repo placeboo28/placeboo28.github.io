@@ -279,7 +279,7 @@ body.split #msg{top:calc(50% - .6em)}
 <script>
 (function(){
 const V = THREE.Vector3;
-const A = {hw:40, hl:60, h:30, gw:12, gh:11, gd:10};
+const A = {hw:52, hl:78, h:36, gw:12, gh:11, gd:10};
 const R = 2.6, G = -34;
 const CAR = {acc:38, brake:75, max:28, maxBoost:46, boostAcc:55, airBoost:46, jump:13.5, dbl:11, dodge:17, turn:2.7};
 const SKILL = {
@@ -301,7 +301,7 @@ renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 host.appendChild(renderer.domElement);
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x070a12);
-scene.fog=new THREE.Fog(0x070a12,140,280);
+scene.fog=new THREE.Fog(0x070a12,180,360);
 const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,600);
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
 
@@ -310,7 +310,7 @@ const sun=new THREE.DirectionalLight(0xffffff,0.85);
 sun.position.set(35,70,25);
 sun.castShadow=true;
 sun.shadow.mapSize.set(2048,2048);
-Object.assign(sun.shadow.camera,{left:-75,right:75,top:75,bottom:-75,near:1,far:220});
+Object.assign(sun.shadow.camera,{left:-100,right:100,top:100,bottom:-100,near:1,far:280});
 scene.add(sun);
 
 /* ---------- Pitch ---------- */
@@ -553,8 +553,8 @@ function makePad(x,z,big){
   g.position.set(x,0,z);scene.add(g);
   pads.push({x,z,big,active:true,t:0,orb,base});
 }
-[[-29,0],[29,0],[-28,-44],[28,-44],[-28,44],[28,44]].forEach(([x,z])=>makePad(x,z,true));
-[[0,-30],[0,30],[-18,-14],[18,-14],[-18,14],[18,14],[-14,-44],[14,-44],[-14,44],[14,44],[0,-50],[0,50]].forEach(([x,z])=>makePad(x,z,false));
+[[-37.7,0],[37.7,0],[-36.4,-57.2],[36.4,-57.2],[-36.4,57.2],[36.4,57.2]].forEach(([x,z])=>makePad(x,z,true));
+[[0,-39],[0,39],[-23.4,-18.2],[23.4,-18.2],[-23.4,18.2],[23.4,18.2],[-18.2,-57.2],[18.2,-57.2],[-18.2,57.2],[18.2,57.2],[0,-65],[0,65]].forEach(([x,z])=>makePad(x,z,false));
 
 /* ---------- Particles ---------- */
 const parts=[];const pGeo=new THREE.SphereGeometry(.35,6,5);
@@ -960,14 +960,14 @@ function award(c,pts,label,stat){
   }
 }
 
-const SLOTS={1:[[0,-42]],2:[[-18,-38],[18,-38]],3:[[-20,-38],[20,-38],[0,-50]],4:[[-22,-36],[22,-36],[0,-44],[0,-55]]};
+const SLOTS={1:[[0,-54.6]],2:[[-23.4,-49.4],[23.4,-49.4]],3:[[-26,-49.4],[26,-49.4],[0,-62]],4:[[-28.6,-46.8],[28.6,-46.8],[0,-54],[0,-63]]};
 function setCar(c,x,z,yaw){c.pos.set(x,0,z);c.vel.set(0,0,0);c.up.set(0,1,0);c.fwd.set(Math.sin(yaw),0,Math.cos(yaw));c.surf=0;c.visOff.set(0,0,0);c.snap=true;c.onGround=true;c.flip=0;c.boost=33;c.prevJump=true;c.boosting=false;c.dead=0;}
 function kickoff(){
   ball.pos.set(0,R,0);ball.vel.set(0,0,0);ballMesh.visible=true;
   ball.last=ball.prev=null;ball.lastT=ball.prevT=0;ball.shot=null;
   const n=Math.max(1,cars.filter(c=>c.team==='blue').length);
   let slots=SLOTS[n].map(s=>s.slice());
-  if(n===1)slots=[[[0,-18,18][Math.floor(Math.random()*3)],-42]];
+  if(n===1)slots=[[[0,-23,23][Math.floor(Math.random()*3)],-55]];
   slots.sort(()=>Math.random()-.5);
   const blue=cars.filter(c=>c.team==='blue'),orange=cars.filter(c=>c.team==='orange');
   blue.forEach((c,i)=>setCar(c,slots[i][0],slots[i][1],0));
@@ -1059,16 +1059,16 @@ chips('kindChips',v=>{
   renderGarage();
 });
 const DRILLS=[
-  {n:'Balón parado',car:[0,-5],ball:[0,R,20],vel:[0,0,0],t:7},
-  {n:'Desde el lado',car:[0,0],ball:[-15,R,30],vel:[0,0,0],t:7},
-  {n:'Balón cruzado',car:[0,5],ball:[25,R,32],vel:[-12,0,0],t:8},
-  {n:'Viene hacia ti',car:[0,8],ball:[0,R,45],vel:[0,0,-14],t:8},
-  {n:'Balón botando',car:[0,0],ball:[10,R,25],vel:[0,16,3],t:8},
-  {n:'Centro desde la banda',car:[0,10],ball:[-26,4,38],vel:[14,12,0],t:8},
-  {n:'Se escapa',car:[6,-12],ball:[-6,R,8],vel:[-5,0,13],t:9},
-  {n:'Balón alto',car:[0,12],ball:[0,13,38],vel:[0,5,-3],t:9},
-  {n:'Rebote en la pared',car:[0,14],ball:[-18,R,40],vel:[-20,0,0],t:9},
-  {n:'Centro rápido',car:[0,20],ball:[26,R,46],vel:[-22,10,0],t:9}
+  {n:'Balón parado',car:[0,-6.5],ball:[0,R,26],vel:[0,0,0],t:8},
+  {n:'Desde el lado',car:[0,0],ball:[-19.5,R,39],vel:[0,0,0],t:8},
+  {n:'Balón cruzado',car:[0,6.5],ball:[32.5,R,41.6],vel:[-12,0,0],t:9},
+  {n:'Viene hacia ti',car:[0,10.4],ball:[0,R,58.5],vel:[0,0,-14],t:9},
+  {n:'Balón botando',car:[0,0],ball:[13,R,32.5],vel:[0,16,3],t:9},
+  {n:'Centro desde la banda',car:[0,13],ball:[-33.8,4,49.4],vel:[14,12,0],t:9},
+  {n:'Se escapa',car:[7.8,-15.6],ball:[-7.8,R,10.4],vel:[-5,0,13],t:10},
+  {n:'Balón alto',car:[0,15.6],ball:[0,13,49.4],vel:[0,5,-3],t:10},
+  {n:'Rebote en la pared',car:[0,18.2],ball:[-23.4,R,52],vel:[-20,0,0],t:10},
+  {n:'Centro rápido',car:[0,26],ball:[33.8,R,59.8],vel:[-22,10,0],t:10}
 ];
 function buildSolo(m){
   cars.forEach(c=>scene.remove(c.mesh));
@@ -1090,7 +1090,7 @@ function startSolo(){
     game.drill=-1;game.drillGoals=0;nextDrill();
   }else{
     $('tagBlue').textContent='GOLES';$('tagOrange').textContent='EN PROPIA';
-    setCar(player,0,-42,0);player.boost=100;freeReset();
+    setCar(player,0,-55,0);player.boost=100;freeReset();
     showMsg('JUEGO LIBRE<small>TURBO INFINITO · SIN TIEMPO</small>','var(--boost)',2.2);
   }
   players.forEach((p,i)=>{cams[i].pos.copy(p.pos).add(new V(0,5,-12));cams[i].look.copy(p.pos);cams[i].hf.set(0,0,1);});
@@ -1296,7 +1296,7 @@ const cams=[{cam:camera,pos:camPos,look:camLook,up:new V(0,1,0),hf:new V(0,0,1)}
 function updateCamera(dt){
   if(game.state==='menu'){
     orbit+=dt*.07;camera.up.set(0,1,0);
-    camera.position.set(Math.sin(orbit)*85,34,Math.cos(orbit)*105);camera.lookAt(0,2,0);
+    camera.position.set(Math.sin(orbit)*110,42,Math.cos(orbit)*135);camera.lookAt(0,2,0);
     return;
   }
   players.forEach((c,i)=>followCam(c,cams[i],dt));
@@ -1405,7 +1405,7 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 // Opening scene: kickoff positions visible behind the menu
-setCar(player,0,-42,0);setCar(cars[1],0,42,Math.PI);
+setCar(player,0,-55,0);setCar(cars[1],0,55,Math.PI);
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&['play','countdown','goal'].includes(game.state))togglePause();});
 requestAnimationFrame(frame);
 })();
