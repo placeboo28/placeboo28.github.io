@@ -813,7 +813,7 @@ function updateBall(dt){
   const S=arenaSurf(b.pos,R*.6,R*.6);
   if(S.d<R){
     const n=S.n,fl=n.y>.9;
-    if((n.z<-.7&&b.pos.z>0&&b.pos.y>A.gh)||n.y<-.7)b.wallHit=true;
+    if(b.last&&b.last.human&&((n.z<-.7&&b.pos.z>0&&b.pos.y>A.gh)||n.y<-.7))b.wallHit=true;
     b.pos.addScaledVector(n,R-S.d);
     const vn=b.vel.dot(n);
     if(vn<0){b.vel.addScaledVector(n,-(1+(fl?.6:.72))*vn);if(fl&&b.vel.dot(n)<1.5)b.vel.addScaledVector(n,-b.vel.dot(n));}
@@ -1105,15 +1105,22 @@ const DRILLS_TIROS=[
   {n:'Centro rápido',car:[0,26],ball:[33.8,R,59.8],vel:[-22,10,0],t:10}
 ];
 const DRILLS_SAIKO=[
-  {n:'Balón flotando junto a la pared',car:[0,20],ball:[0,20,60],vel:[0,6,4],t:12},
-  {n:'Rodando hacia el rincón',car:[-10,15],ball:[-20,R,45],vel:[0,0,25],t:12},
-  {n:'Globo a la pared de fondo',car:[0,0],ball:[10,R,30],vel:[0,22,16],t:12},
-  {n:'Balón cerca del techo',car:[0,10],ball:[0,30,40],vel:[0,4,0],t:12},
-  {n:'Desde la banda alta',car:[-20,10],ball:[-40,18,50],vel:[6,8,6],t:12},
-  {n:'Vuelve desde la pared',car:[0,25],ball:[0,22,70],vel:[0,4,-10],t:12},
-  {n:'Bote muy alto',car:[0,-5],ball:[15,R,20],vel:[0,26,10],t:12},
-  {n:'Centro a la pared',car:[10,20],ball:[-25,10,55],vel:[12,14,8],t:12}
+  {n:'Lanzamiento al centro',car:[0,0],ball:[0,R,20],launch:[0,22,55,1.5],t:12},
+  {n:'Lanzamiento desde la izquierda',car:[-10,0],ball:[-20,R,25],launch:[-8,20,60,1.5],t:12},
+  {n:'Lanzamiento desde la derecha',car:[10,0],ball:[20,R,25],launch:[8,24,58,1.5],t:12},
+  {n:'Muy cerca de la pared',car:[0,10],ball:[0,R,40],launch:[0,26,68,1.3],t:12},
+  {n:'Desde la banda izquierda',car:[-20,5],ball:[-35,R,30],launch:[-10,18,62,1.5],t:12},
+  {n:'Desde la banda derecha',car:[20,5],ball:[35,R,30],launch:[12,20,64,1.5],t:12},
+  {n:'Lanzamiento muy alto',car:[0,-15],ball:[0,R,10],launch:[0,28,50,1.8],t:12},
+  {n:'Lanzamiento cruzado',car:[0,20],ball:[-15,R,50],launch:[15,22,66,1.2],t:12}
 ];
+function launchBall(D){
+  const [tx,ty,tz,t]=D.launch,g=G*.85;
+  ball.vel.set((tx-ball.pos.x)/t,(ty-ball.pos.y)/t-.5*g*t,(tz-ball.pos.z)/t);
+  for(let i=0;i<28;i++)spawn(ball.pos,new V(Math.random()-.5,Math.random()*.6,Math.random()-.5).normalize().multiplyScalar(8+Math.random()*10),i%2?COL.boost:0xffffff,.6,1.2,-10);
+  beep(200,.35,'sawtooth',.1,700);
+  showMsg('¡AHÍ VA!','var(--boost)',.7);
+}
 const DRILLS_PINCH=[
   {n:'Sube por la pared',car:[22,20],ball:[49.4,12,20],vel:[2,12,0],t:9,face:1},
   {n:'Pared izquierda',car:[-22,24],ball:[-49.4,12,30],vel:[-2,14,4],t:9,face:1},
@@ -1126,7 +1133,7 @@ const DRILLS_PINCH=[
 ];
 const PACKS={
   tiros:{n:'Tiros',d:DRILLS_TIROS,req:null,tip:'10 tiros cada vez más difíciles. Tienes unos segundos para marcar cada uno, con el turbo lleno.'},
-  saiko:{n:'Saiko',d:DRILLS_SAIKO,req:'wall',need:'REBOTA EN LA PARED O EL TECHO',miss:'SIN REBOTE',tip:'8 jugadas de saiko: haz que el balón rebote en la pared de fondo (encima de la portería) o en el techo y después mete gol. Si entra sin rebotar, no cuenta.'},
+  saiko:{n:'Saiko',d:DRILLS_SAIKO,req:'wall',need:'EL BALÓN SALE SOLO · HAZ EL SAIKO',miss:'NO HA REBOTADO EN LA PARED NI EN EL TECHO',tip:'8 jugadas de saiko: el juego lanza el balón solo hacia arriba. Vuela, dale para que rebote en la pared de fondo (encima de la portería) o en el techo, y mete gol. Si entra sin que tú lo hayas hecho rebotar, no cuenta.'},
   pinch:{n:'Pinch',d:DRILLS_PINCH,req:'pinch',need:'SALTA Y APLÁSTALO CONTRA LA PARED',miss:'SIN PINCH',tip:'8 jugadas de pinch: el balón va pegado a la pared. Acércate, salta y choca contra él para aplastarlo contra la pared: saldrá disparado. Después mete gol. Si no haces pinch, no cuenta.'}
 };
 let DRILLS=DRILLS_TIROS;
@@ -1166,7 +1173,7 @@ function nextDrill(){
   if(game.drill>=DRILLS.length){endTraining();return;}
   const D=DRILLS[game.drill];
   setCar(player,D.car[0],D.car[1],D.face?Math.atan2(D.ball[0]-D.car[0],D.ball[2]-D.car[1]):0);player.boost=100;
-  ball.pos.set(D.ball[0],D.ball[1],D.ball[2]);ball.vel.set(D.vel[0],D.vel[1],D.vel[2]);ballMesh.visible=true;
+  ball.pos.set(D.ball[0],D.ball[1],D.ball[2]);if(D.vel)ball.vel.set(D.vel[0],D.vel[1],D.vel[2]);else ball.vel.set(0,0,0);ballMesh.visible=true;
   ball.last=ball.prev=null;ball.shot=null;ball.wallHit=false;ball.pinched=false;
   game.drillTime=D.t;game.state='countdown';game.countdown=1.3;
   const PK=PACKS[game.pack];
@@ -1417,7 +1424,7 @@ function frame(now){
   const st=game.state;
   if(st==='countdown'){
     game.countdown-=dt;
-    if(game.kind==='train'){if(game.countdown<=0){game.state='play';beep(880,.2,'square',.06);}}
+    if(game.kind==='train'){if(game.countdown<=0){game.state='play';const D=DRILLS[game.drill];if(D&&D.launch)launchBall(D);else beep(880,.2,'square',.06);}}
     else{
     const n=Math.ceil(game.countdown);
     if(n!==game.lastCount&&n>0){game.lastCount=n;showMsg(String(n),'var(--ink)',0);beep(440,.15,'square',.06);}
