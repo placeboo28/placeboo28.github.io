@@ -800,6 +800,7 @@ function syncCar(c,dt){
 let lastHit=0;
 function updateBall(dt){
   const b=ball;
+  if(b.frozen)return;
   b.vel.y+=G*.85*dt;b.vel.multiplyScalar(1-.05*dt);
   const s=b.vel.length();if(s>80)b.vel.multiplyScalar(80/s);
   b.pos.addScaledVector(b.vel,dt);
@@ -852,12 +853,14 @@ function pinch(c,S,rel){
   if(game.state==='play')award(c,25,'PINCH');
 }
 function carBall(c){
+  if(ball.frozen&&!c.human)return;
   const hc=c.pos.clone().addScaledVector(c.up,1.1*c.st.size).addScaledVector(c.fwd,.8*c.st.size);
   const d=ball.pos.clone().sub(hc);const dist=d.length(),min=R+2.0*c.st.size;
   if(dist>=min||dist<1e-4)return;
   const n=d.divideScalar(dist);
   ball.pos.copy(hc).addScaledVector(n,min);
   const rel=c.vel.clone().sub(ball.vel).dot(n);
+  if(ball.frozen){ball.frozen=false;ball.vel.set(0,0,0);}
   if(rel>0){
     const threat=!!(ball.shot&&ball.shot.team!==c.team&&isShot(ball.shot.team));
     const SB=arenaSurf(ball.pos,R*.6,R*.6);
@@ -988,7 +991,7 @@ function award(c,pts,label,stat){
 const SLOTS={1:[[0,-54.6]],2:[[-23.4,-49.4],[23.4,-49.4]],3:[[-26,-49.4],[26,-49.4],[0,-62]],4:[[-28.6,-46.8],[28.6,-46.8],[0,-54],[0,-63]]};
 function setCar(c,x,z,yaw){c.pos.set(x,0,z);c.vel.set(0,0,0);c.up.set(0,1,0);c.fwd.set(Math.sin(yaw),0,Math.cos(yaw));c.surf=0;c.visOff.set(0,0,0);c.snap=true;c.onGround=true;c.flip=0;c.boost=33;c.prevJump=true;c.boosting=false;c.dead=0;}
 function kickoff(){
-  ball.pos.set(0,R,0);ball.vel.set(0,0,0);ballMesh.visible=true;
+  ball.pos.set(0,R,0);ball.vel.set(0,0,0);ballMesh.visible=true;ball.frozen=false;
   ball.last=ball.prev=null;ball.lastT=ball.prevT=0;ball.shot=null;
   const n=Math.max(1,cars.filter(c=>c.team==='blue').length);
   let slots=SLOTS[n].map(s=>s.slice());
@@ -1122,19 +1125,19 @@ function launchBall(D){
   showMsg('¡AHÍ VA!','var(--boost)',.7);
 }
 const DRILLS_PINCH=[
-  {n:'Sube por la pared',car:[22,20],ball:[49.4,12,20],vel:[2,12,0],t:9,face:1},
-  {n:'Pared izquierda',car:[-22,24],ball:[-49.4,12,30],vel:[-2,14,4],t:9,face:1},
-  {n:'Baja por la pared',car:[24,40],ball:[49.4,18,45],vel:[2,6,-4],t:9,face:1},
-  {n:'Pared de fondo izquierda',car:[-20,50],ball:[-25,14,75.4],vel:[0,12,2],t:9,face:1},
-  {n:'Pared de fondo derecha',car:[20,52],ball:[25,14,75.4],vel:[0,10,2],t:9,face:1},
-  {n:'Cae por la banda',car:[-22,40],ball:[-49.4,20,55],vel:[-2,4,-6],t:9,face:1},
-  {n:'Sube rápido',car:[22,-5],ball:[49.4,10,10],vel:[2,16,10],t:9,face:1},
-  {n:'Corre por la pared',car:[-24,-10],ball:[-49.4,14,0],vel:[-2,12,12],t:9,face:1}
+  {n:'Sube por la pared',car:[22,20],ball:[49.4,12,20],t:9,face:1},
+  {n:'Pared izquierda',car:[-22,24],ball:[-49.4,12,30],t:9,face:1},
+  {n:'Baja por la pared',car:[24,40],ball:[49.4,18,45],t:9,face:1},
+  {n:'Pared de fondo izquierda',car:[-20,50],ball:[-25,14,75.4],t:9,face:1},
+  {n:'Pared de fondo derecha',car:[20,52],ball:[25,14,75.4],t:9,face:1},
+  {n:'Cae por la banda',car:[-22,40],ball:[-49.4,20,55],t:9,face:1},
+  {n:'Sube rápido',car:[22,-5],ball:[49.4,10,10],t:9,face:1},
+  {n:'Corre por la pared',car:[-24,-10],ball:[-49.4,14,0],t:9,face:1}
 ];
 const PACKS={
   tiros:{n:'Tiros',d:DRILLS_TIROS,req:null,tip:'10 tiros cada vez más difíciles. Tienes unos segundos para marcar cada uno, con el turbo lleno.'},
   saiko:{n:'Saiko',d:DRILLS_SAIKO,req:'wall',need:'EL BALÓN SALE SOLO · HAZ EL SAIKO',miss:'NO HA REBOTADO EN LA PARED NI EN EL TECHO',tip:'8 jugadas de saiko: el juego lanza el balón solo hacia arriba. Vuela, dale para que rebote en la pared de fondo (encima de la portería) o en el techo, y mete gol. Si entra sin que tú lo hayas hecho rebotar, no cuenta.'},
-  pinch:{n:'Pinch',d:DRILLS_PINCH,req:'pinch',need:'SALTA Y APLÁSTALO CONTRA LA PARED',miss:'SIN PINCH',tip:'8 jugadas de pinch: el balón va pegado a la pared. Acércate, salta y choca contra él para aplastarlo contra la pared: saldrá disparado. Después mete gol. Si no haces pinch, no cuenta.'}
+  pinch:{n:'Pinch',d:DRILLS_PINCH,req:'pinch',need:'ESTÁ QUIETO · SALTA Y APLÁSTALO CONTRA LA PARED',miss:'SIN PINCH',tip:'8 jugadas de pinch: el balón está quieto pegado a la pared hasta que lo toques. Acércate, salta y choca contra él para aplastarlo contra la pared: saldrá disparado. Después mete gol. Si no haces pinch, no cuenta.'}
 };
 let DRILLS=DRILLS_TIROS;
 chips('packChips',v=>{game.pack=v;DRILLS=PACKS[v].d;$('kindTip').textContent=PACKS[v].tip;$('result').hidden=true;$('playBtn').textContent=KIND_BTN.train;});
@@ -1164,7 +1167,7 @@ function startSolo(){
   players.forEach((p,i)=>{cams[i].pos.copy(p.pos).add(new V(0,5,-12));cams[i].look.copy(p.pos);cams[i].hf.set(0,0,1);});
 }
 function freeReset(){
-  ball.pos.set(0,R,0);ball.vel.set(0,0,0);ballMesh.visible=true;
+  ball.pos.set(0,R,0);ball.vel.set(0,0,0);ballMesh.visible=true;ball.frozen=false;
   ball.last=ball.prev=null;ball.shot=null;
   game.state='play';
 }
@@ -1174,7 +1177,7 @@ function nextDrill(){
   const D=DRILLS[game.drill];
   setCar(player,D.car[0],D.car[1],D.face?Math.atan2(D.ball[0]-D.car[0],D.ball[2]-D.car[1]):0);player.boost=100;
   ball.pos.set(D.ball[0],D.ball[1],D.ball[2]);if(D.vel)ball.vel.set(D.vel[0],D.vel[1],D.vel[2]);else ball.vel.set(0,0,0);ballMesh.visible=true;
-  ball.last=ball.prev=null;ball.shot=null;ball.wallHit=false;ball.pinched=false;
+  ball.last=ball.prev=null;ball.shot=null;ball.wallHit=false;ball.pinched=false;ball.frozen=game.pack==='pinch';
   game.drillTime=D.t;game.state='countdown';game.countdown=1.3;
   const PK=PACKS[game.pack];
   showMsg('TIRO '+(game.drill+1)+' DE '+DRILLS.length+'<small>'+D.n.toUpperCase()+(PK.need?' · '+PK.need:'')+'</small>','var(--boost)',PK.need?2:1.3);
