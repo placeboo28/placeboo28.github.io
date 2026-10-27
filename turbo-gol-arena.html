@@ -193,6 +193,14 @@ body.split #msg{top:calc(50% - .6em)}
       </div>
       <p class="tip" id="kindTip">Partido contra la CPU o contra otro jugador. Es lo único que cuenta para las misiones.</p>
     </div>
+    <div class="row" id="packRow" hidden>
+      <label>Entrenamiento</label>
+      <div class="chips" id="packChips">
+        <button class="chip" type="button" id="pk-tiros" data-v="tiros" aria-pressed="true">Tiros</button>
+        <button class="chip" type="button" id="pk-saiko" data-v="saiko" aria-pressed="false">Saiko</button>
+        <button class="chip" type="button" id="pk-pinch" data-v="pinch" aria-pressed="false">Pinch</button>
+      </div>
+    </div>
     <div class="row" id="playersRow">
       <label>Jugadores</label>
       <div class="chips" id="playersChips">
@@ -793,7 +801,7 @@ let lastHit=0;
 function updateBall(dt){
   const b=ball;
   b.vel.y+=G*.85*dt;b.vel.multiplyScalar(1-.05*dt);
-  const s=b.vel.length();if(s>75)b.vel.multiplyScalar(75/s);
+  const s=b.vel.length();if(s>80)b.vel.multiplyScalar(80/s);
   b.pos.addScaledVector(b.vel,dt);
   const sz=Math.sign(b.pos.z)||1,az=Math.abs(b.pos.z);
   if(az>A.hl){
@@ -805,6 +813,7 @@ function updateBall(dt){
   const S=arenaSurf(b.pos,R*.6,R*.6);
   if(S.d<R){
     const n=S.n,fl=n.y>.9;
+    if((n.z<-.7&&b.pos.z>0&&b.pos.y>A.gh)||n.y<-.7)b.wallHit=true;
     b.pos.addScaledVector(n,R-S.d);
     const vn=b.vel.dot(n);
     if(vn<0){b.vel.addScaledVector(n,-(1+(fl?.6:.72))*vn);if(fl&&b.vel.dot(n)<1.5)b.vel.addScaledVector(n,-b.vel.dot(n));}
@@ -828,6 +837,20 @@ function touchBall(c,threat){
   if(threat&&!isShot(ball.shot.team)){award(c,50,'PARADA','saves');ball.shot=null;}
   if(isShot(c.team)&&!(ball.shot&&ball.shot.by===c)){award(c,20,'TIRO','shots');ball.shot={by:c,team:c.team};}
 }
+function pinch(c,S,rel){
+  const t=c.vel.clone().addScaledVector(S.n,-c.vel.dot(S.n));
+  if(t.lengthSq()<1){t.copy(c.fwd).addScaledVector(S.n,-c.fwd.dot(S.n));}
+  const dir=t.normalize().addScaledVector(S.n,.45).normalize();
+  const goalZ=c.team==='blue'?A.hl:-A.hl;
+  const aim=new V(0,6,goalZ).sub(ball.pos).normalize();
+  dir.lerp(aim,.3).normalize();
+  ball.pos.addScaledVector(S.n,Math.max(0,R-S.d)+.3);
+  ball.vel.copy(dir).multiplyScalar(Math.min(80,35+rel*1.6*c.st.power));
+  ball.pinched=true;
+  for(let i=0;i<30;i++)spawn(ball.pos,new V(Math.random()-.5,Math.random()-.5,Math.random()-.5).normalize().multiplyScalar(12+Math.random()*14),i%2?0xffffff:COL.boost,.5,1.1,0);
+  beep(320,.25,'square',.12,500);
+  if(game.state==='play')award(c,25,'PINCH');
+}
 function carBall(c){
   const hc=c.pos.clone().addScaledVector(c.up,1.1*c.st.size).addScaledVector(c.fwd,.8*c.st.size);
   const d=ball.pos.clone().sub(hc);const dist=d.length(),min=R+2.0*c.st.size;
@@ -837,6 +860,8 @@ function carBall(c){
   const rel=c.vel.clone().sub(ball.vel).dot(n);
   if(rel>0){
     const threat=!!(ball.shot&&ball.shot.team!==c.team&&isShot(ball.shot.team));
+    const SB=arenaSurf(ball.pos,R*.6,R*.6);
+    if(SB.d<R+1.5&&n.dot(SB.n)<-.25&&rel>8){pinch(c,SB,rel);touchBall(c,threat);return;}
     ball.vel.addScaledVector(n,rel*1.55*c.st.power+4);
     if(c.onGround&&c.surf===0)ball.vel.y+=2.5;
     c.vel.addScaledVector(n,-rel*.15);
@@ -932,7 +957,7 @@ function aiInput(c,dt){
 }
 
 /* ---------- Game flow ---------- */
-const game={state:'menu',blue:0,orange:0,time:180,duration:180,overtime:false,ot:0,countdown:0,lastCount:0,goalTimer:0,difficulty:'normal',mode:1,clock:0,prev:null,ballCam:true,kind:'match',drill:0,drillGoals:0,drillTime:0,two:false,coop:false,selPlayers:1,selCoop:false};
+const game={state:'menu',blue:0,orange:0,time:180,duration:180,overtime:false,ot:0,countdown:0,lastCount:0,goalTimer:0,difficulty:'normal',mode:1,clock:0,prev:null,ballCam:true,kind:'match',pack:'tiros',drill:0,drillGoals:0,drillTime:0,two:false,coop:false,selPlayers:1,selCoop:false};
 function toggleCam(){game.ballCam=!game.ballCam;$('camName').textContent=game.ballCam?'balón':'coche';}
 const $=id=>document.getElementById(id);
 const msgEl=$('msg');let msgTimer=0;
@@ -994,6 +1019,14 @@ function startMatch(){
 function updateScore(){$('sBlue').textContent=game.blue;$('sOrange').textContent=game.orange;}
 function scored(team){
   if(game.kind!=='match'){
+    const PK=PACKS[game.pack];
+    if(game.kind==='train'&&team==='blue'&&PK.req&&!(PK.req==='wall'?ball.wallHit:ball.pinched)){
+      game.orange++;updateScore();ballMesh.visible=false;marker.visible=false;
+      showMsg('NO CUENTA<small>'+PK.miss+' · '+PK.need+'</small>','var(--orange)',0);
+      beep(180,.4,'sawtooth',.08,-80);
+      game.state='goal';game.goalTimer=1.8;
+      return;
+    }
     game[team]++;if(game.kind==='train'&&team==='blue')game.drillGoals++;
     updateScore();
     for(let i=0;i<60;i++){const v=new V(Math.random()-.5,Math.random()*.9,Math.random()-.5).normalize().multiplyScalar(18+Math.random()*24);spawn(ball.pos,v,i%3?COL[team]:0xffffff,1.2,1.5,-20);}
@@ -1052,13 +1085,14 @@ const KIND_BTN={match:'¡A JUGAR!',train:'EMPEZAR ENTRENAMIENTO',free:'ENTRAR EN
 chips('kindChips',v=>{
   game.kind=v;const m=v==='match',two=m&&game.selPlayers===2;
   ['playersRow','modeRow','diffRow','timeRow'].forEach(id=>$(id).hidden=!m);
+  $('packRow').hidden=v!=='train';
   $('teamsRow').hidden=!two;$('slotChips').hidden=!two;
   if(!two){gslot=0;viewing=curEq();}
-  $('kindTip').textContent=KIND_TIPS[v];$('playBtn').textContent=KIND_BTN[v];
+  $('kindTip').textContent=v==='train'?PACKS[game.pack].tip:KIND_TIPS[v];$('playBtn').textContent=KIND_BTN[v];
   $('result').hidden=true;$('stats').hidden=true;$('newCars').hidden=true;
   renderGarage();
 });
-const DRILLS=[
+const DRILLS_TIROS=[
   {n:'Balón parado',car:[0,-6.5],ball:[0,R,26],vel:[0,0,0],t:8},
   {n:'Desde el lado',car:[0,0],ball:[-19.5,R,39],vel:[0,0,0],t:8},
   {n:'Balón cruzado',car:[0,6.5],ball:[32.5,R,41.6],vel:[-12,0,0],t:9},
@@ -1070,6 +1104,33 @@ const DRILLS=[
   {n:'Rebote en la pared',car:[0,18.2],ball:[-23.4,R,52],vel:[-20,0,0],t:10},
   {n:'Centro rápido',car:[0,26],ball:[33.8,R,59.8],vel:[-22,10,0],t:10}
 ];
+const DRILLS_SAIKO=[
+  {n:'Balón flotando junto a la pared',car:[0,20],ball:[0,20,60],vel:[0,6,4],t:12},
+  {n:'Rodando hacia el rincón',car:[-10,15],ball:[-20,R,45],vel:[0,0,25],t:12},
+  {n:'Globo a la pared de fondo',car:[0,0],ball:[10,R,30],vel:[0,22,16],t:12},
+  {n:'Balón cerca del techo',car:[0,10],ball:[0,30,40],vel:[0,4,0],t:12},
+  {n:'Desde la banda alta',car:[-20,10],ball:[-40,18,50],vel:[6,8,6],t:12},
+  {n:'Vuelve desde la pared',car:[0,25],ball:[0,22,70],vel:[0,4,-10],t:12},
+  {n:'Bote muy alto',car:[0,-5],ball:[15,R,20],vel:[0,26,10],t:12},
+  {n:'Centro a la pared',car:[10,20],ball:[-25,10,55],vel:[12,14,8],t:12}
+];
+const DRILLS_PINCH=[
+  {n:'Sube por la pared',car:[22,20],ball:[49.4,12,20],vel:[2,12,0],t:9,face:1},
+  {n:'Pared izquierda',car:[-22,24],ball:[-49.4,12,30],vel:[-2,14,4],t:9,face:1},
+  {n:'Baja por la pared',car:[24,40],ball:[49.4,18,45],vel:[2,6,-4],t:9,face:1},
+  {n:'Pared de fondo izquierda',car:[-20,50],ball:[-25,14,75.4],vel:[0,12,2],t:9,face:1},
+  {n:'Pared de fondo derecha',car:[20,52],ball:[25,14,75.4],vel:[0,10,2],t:9,face:1},
+  {n:'Cae por la banda',car:[-22,40],ball:[-49.4,20,55],vel:[-2,4,-6],t:9,face:1},
+  {n:'Sube rápido',car:[22,-5],ball:[49.4,10,10],vel:[2,16,10],t:9,face:1},
+  {n:'Corre por la pared',car:[-24,-10],ball:[-49.4,14,0],vel:[-2,12,12],t:9,face:1}
+];
+const PACKS={
+  tiros:{n:'Tiros',d:DRILLS_TIROS,req:null,tip:'10 tiros cada vez más difíciles. Tienes unos segundos para marcar cada uno, con el turbo lleno.'},
+  saiko:{n:'Saiko',d:DRILLS_SAIKO,req:'wall',need:'REBOTA EN LA PARED O EL TECHO',miss:'SIN REBOTE',tip:'8 jugadas de saiko: haz que el balón rebote en la pared de fondo (encima de la portería) o en el techo y después mete gol. Si entra sin rebotar, no cuenta.'},
+  pinch:{n:'Pinch',d:DRILLS_PINCH,req:'pinch',need:'SALTA Y APLÁSTALO CONTRA LA PARED',miss:'SIN PINCH',tip:'8 jugadas de pinch: el balón va pegado a la pared. Acércate, salta y choca contra él para aplastarlo contra la pared: saldrá disparado. Después mete gol. Si no haces pinch, no cuenta.'}
+};
+let DRILLS=DRILLS_TIROS;
+chips('packChips',v=>{game.pack=v;DRILLS=PACKS[v].d;$('kindTip').textContent=PACKS[v].tip;$('result').hidden=true;$('playBtn').textContent=KIND_BTN.train;});
 function buildSolo(m){
   cars.forEach(c=>scene.remove(c.mesh));
   player=makeCar('blue','Tú',true,m);player.pid=0;
@@ -1104,18 +1165,20 @@ function nextDrill(){
   game.drill++;
   if(game.drill>=DRILLS.length){endTraining();return;}
   const D=DRILLS[game.drill];
-  setCar(player,D.car[0],D.car[1],0);player.boost=100;
+  setCar(player,D.car[0],D.car[1],D.face?Math.atan2(D.ball[0]-D.car[0],D.ball[2]-D.car[1]):0);player.boost=100;
   ball.pos.set(D.ball[0],D.ball[1],D.ball[2]);ball.vel.set(D.vel[0],D.vel[1],D.vel[2]);ballMesh.visible=true;
-  ball.last=ball.prev=null;ball.shot=null;
+  ball.last=ball.prev=null;ball.shot=null;ball.wallHit=false;ball.pinched=false;
   game.drillTime=D.t;game.state='countdown';game.countdown=1.3;
-  showMsg('TIRO '+(game.drill+1)+' DE '+DRILLS.length+'<small>'+D.n.toUpperCase()+'</small>','var(--boost)',1.3);
+  const PK=PACKS[game.pack];
+  showMsg('TIRO '+(game.drill+1)+' DE '+DRILLS.length+'<small>'+D.n.toUpperCase()+(PK.need?' · '+PK.need:'')+'</small>','var(--boost)',PK.need?2:1.3);
 }
 function endTraining(){
   game.state='over';hideMsg();$('exitBtn').hidden=true;
-  const g=game.drillGoals,rec=g>(prog.trainBest||0);
-  prog.trainBest=Math.max(prog.trainBest||0,g);saveProg();
+  const key=game.pack==='tiros'?'trainBest':'trainBest_'+game.pack;
+  const g=game.drillGoals,rec=g>(prog[key]||0);
+  prog[key]=Math.max(prog[key]||0,g);saveProg();
   const r=$('result');r.hidden=false;r.style.color='var(--boost)';
-  r.textContent='Entrenamiento: '+g+' de '+DRILLS.length+' goles'+(rec&&g>0?' · ¡Nuevo récord!':' · Récord: '+prog.trainBest);
+  r.textContent='Entrenamiento de '+PACKS[game.pack].n+': '+g+' de '+DRILLS.length+' goles'+(rec&&g>0?' · ¡Nuevo récord!':' · Récord: '+prog[key]);
   $('stats').hidden=true;$('newCars').hidden=true;
   $('playBtn').textContent='REPETIR ENTRENAMIENTO';
   $('menu').hidden=false;
