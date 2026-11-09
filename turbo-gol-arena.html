@@ -165,7 +165,7 @@ body.split #msg{top:calc(50% - .6em)}
   <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="rgba(17,23,38,.8)" stroke="#26304a" stroke-width="9"/><circle id="ring2" cx="50" cy="50" r="42" fill="none" stroke="#ffd23f" stroke-width="9" stroke-linecap="butt" stroke-dasharray="264" stroke-dashoffset="176"/></svg>
   <div class="val"><div><b id="boostNum2">33</b><span>J2 TURBO</span></div></div>
 </div>
-<div class="hint" id="hint"><b>C</b> turbo · <b>M</b> cámara: <span id="camName">balón</span> · <b>P</b> pausa · <b>N</b> sonido</div>
+<div class="hint" id="hint"><b>C</b> turbo · <b>V</b> air roll · <b>M</b> cámara: <span id="camName">balón</span> · <b>P</b> pausa · <b>N</b> sonido</div>
 <button id="pauseBtn" type="button" hidden>Pausa</button>
 <button id="exitBtn" type="button" hidden>Salir</button>
 
@@ -277,6 +277,7 @@ body.split #msg{top:calc(50% - .6em)}
       <dt>Paredes</dt><dd>Los bordes del campo son curvos: sigue conduciendo y subes por la pared hasta el techo. Si vas despacio, te caes</dd>
       <dt>Salir</dt><dd>Botón Salir arriba a la izquierda, o pausa con <kbd>P</kbd> y pulsa <kbd>Q</kbd></dd>
       <dt>Jugador 2</dt><dd><kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd> conducir · <kbd>Enter</kbd> o <kbd>Ctrl</kbd> derecho saltar · <kbd>Shift</kbd> derecho turbo. Con mando también vale</dd>
+      <dt><kbd>V</kbd></dt><dd>Air roll: en el aire, mantén V y gira con <kbd>A</kbd> o <kbd>D</kbd> para dar vueltas sobre ti mismo. Jugador 2: tecla <kbd>.</kbd> (punto). Con mando: botón LB</dd>
       <dt><kbd>M</kbd></dt><dd>Cambiar cámara: mirando al balón o detrás del coche</dd>
     </dl>
     <p class="tip">Cada coche se desbloquea completando su misión; el progreso se guarda en este navegador. Puntos: gol 100 (+30 si es aéreo) · asistencia 50 · parada 50 · tiro a puerta 20. Tu coche lleva un rombo blanco encima. Marcas en la portería naranja. Si hay empate al final, gol de oro. También funciona con mando de consola y en pantalla táctil.</p>
@@ -610,7 +611,7 @@ function pollPad(){
     if(!gp)continue;
     const dz=v=>Math.abs(v)<.18?0:v;
     const b=i=>gp.buttons[i]?gp.buttons[i]:{pressed:false,value:0};
-    gpads.push({steer:dz(gp.axes[0]||0),stickY:dz(gp.axes[1]||0),trig:(b(7).value||0)-(b(6).value||0),jump:b(0).pressed,boost:b(1).pressed||b(2).pressed});
+    gpads.push({steer:dz(gp.axes[0]||0),stickY:dz(gp.axes[1]||0),trig:(b(7).value||0)-(b(6).value||0),jump:b(0).pressed,boost:b(1).pressed||b(2).pressed,roll:b(4).pressed});
     if(b(9).pressed)start=true;
   }
   if(start&&!padPrev.start){if(game.state==='menu'||game.state==='over')startMatch();else togglePause();}
@@ -623,22 +624,22 @@ function padFor(pid){
 }
 function playerInput(c){
   const k=keys,pid=c.pid||0;
-  let t=0,s=0,j=false,bo=false;
+  let t=0,s=0,j=false,bo=false,ro=false;
   if(!game.two){
     t=((k.KeyW||k.ArrowUp)?1:0)-((k.KeyS||k.ArrowDown)?1:0);
     s=((k.KeyD||k.ArrowRight)?1:0)-((k.KeyA||k.ArrowLeft)?1:0);
-    j=!!k.Space;bo=!!(k.KeyC||k.ShiftLeft||k.ShiftRight);
+    j=!!k.Space;bo=!!(k.KeyC||k.ShiftLeft||k.ShiftRight);ro=!!k.KeyV;
   }else if(pid===0){
     t=(k.KeyW?1:0)-(k.KeyS?1:0);s=(k.KeyD?1:0)-(k.KeyA?1:0);
-    j=!!k.Space;bo=!!(k.KeyC||k.ShiftLeft);
+    j=!!k.Space;bo=!!(k.KeyC||k.ShiftLeft);ro=!!k.KeyV;
   }else{
     t=(k.ArrowUp?1:0)-(k.ArrowDown?1:0);s=(k.ArrowRight?1:0)-(k.ArrowLeft?1:0);
-    j=!!(k.Enter||k.NumpadEnter||k.ControlRight||k.Numpad0);bo=!!(k.ShiftRight||k.Numpad1||k.Slash);
+    j=!!(k.Enter||k.NumpadEnter||k.ControlRight||k.Numpad0);bo=!!(k.ShiftRight||k.Numpad1||k.Slash);ro=!!(k.Period||k.Numpad2);
   }
   const g=padFor(pid);
-  if(g){t+=g.trig-g.stickY*(c.onGround?0:1);s+=g.steer;j=j||g.jump;bo=bo||g.boost;}
+  if(g){t+=g.trig-g.stickY*(c.onGround?0:1);s+=g.steer;j=j||g.jump;bo=bo||g.boost;ro=ro||g.roll;}
   if(pid===0){t-=touch.y;s+=touch.x;j=j||touch.jump;bo=bo||touch.boost;}
-  return {throttle:clamp(t,-1,1),steer:clamp(s,-1,1),jump:j,boost:bo};
+  return {throttle:clamp(t,-1,1),steer:clamp(s,-1,1),jump:j,boost:bo,roll:ro};
 }
 
 /* Touch */
@@ -749,8 +750,14 @@ function updateCar(c,inp,dt,mul){
     c.airTime+=dt;
     c.vel.y+=G*dt;
     let r=right(c);
-    const ya=inp.steer*2.6*dt;
-    c.fwd.copy(c.fwd.clone().multiplyScalar(Math.cos(ya)).addScaledVector(r,Math.sin(ya))).normalize();
+    if(inp.roll){
+      const ra=inp.steer*3.4*dt;
+      c.up.copy(c.up.clone().multiplyScalar(Math.cos(ra)).addScaledVector(r,Math.sin(ra))).normalize();
+      r=right(c);
+    }else{
+      const ya=inp.steer*2.6*dt;
+      c.fwd.copy(c.fwd.clone().multiplyScalar(Math.cos(ya)).addScaledVector(r,Math.sin(ya))).normalize();
+    }
     const pa=inp.throttle*2.4*dt,f0=c.fwd.clone(),u0=c.up.clone();
     c.fwd.copy(f0.clone().multiplyScalar(Math.cos(pa)).addScaledVector(u0,Math.sin(pa))).normalize();
     c.up.copy(u0.multiplyScalar(Math.cos(pa)).addScaledVector(f0,-Math.sin(pa)));
