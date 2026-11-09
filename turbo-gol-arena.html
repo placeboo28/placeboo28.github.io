@@ -127,6 +127,14 @@ kbd{font-family:var(--font-ui);font-size:12px;border:1px solid var(--line);borde
 @media (max-width:520px){.garage{grid-template-columns:1fr}#preview{height:150px}.carGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 #pop2{bottom:12%}
 #divider{display:none}
+#duelHud{display:none;position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 100px);z-index:6;background:rgba(17,23,38,.9);border:2px solid #ff5a5a;color:var(--ink);font-weight:700;font-size:13px;letter-spacing:.1em;padding:6px 14px;white-space:nowrap;max-width:calc(100% - 32px);overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+body.duel #duelHud{display:block}
+.xh{display:none;position:fixed;left:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border:2px solid rgba(255,255,255,.85);border-radius:50%;z-index:5;pointer-events:none;box-shadow:0 0 0 2px rgba(0,0,0,.35)}
+.xh::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px 0 0 -2px;background:#fff;border-radius:50%}
+body.duel #xh1{display:block;top:42%}
+body.duel.split #xh1{top:21%}
+body.duel.split #xh2{display:block;top:71%}
+#bDuel{right:30px;bottom:calc(env(safe-area-inset-bottom,0px) + 150px);width:62px;height:62px;background:#ff5a5a;font-size:11px}
 body.split #divider{display:block;position:fixed;left:0;right:0;top:calc(50% - 2px);height:4px;background:var(--line);z-index:4}
 body.split #pop{bottom:auto;top:30%}
 body.split #b1{bottom:calc(50% + 14px);width:96px;height:96px}
@@ -157,6 +165,9 @@ body.split #msg{top:calc(50% - .6em)}
 <div id="pop"></div>
 <div id="pop2"></div>
 <div id="divider"></div>
+<div id="duelHud" aria-live="polite"></div>
+<div class="xh" id="xh1"></div>
+<div class="xh" id="xh2"></div>
 <div class="boost" id="b1" aria-label="Turbo">
   <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="rgba(17,23,38,.8)" stroke="#26304a" stroke-width="9"/><circle id="ring" cx="50" cy="50" r="42" fill="none" stroke="#ffd23f" stroke-width="9" stroke-linecap="butt" stroke-dasharray="264" stroke-dashoffset="176"/></svg>
   <div class="val"><div><b id="boostNum">33</b><span>TURBO</span></div></div>
@@ -173,6 +184,7 @@ body.split #msg{top:calc(50% - .6em)}
   <div id="joy"><div id="knob"></div></div>
   <div class="tbtn" id="bBoost">TURBO</div>
   <div class="tbtn" id="bJump">SALTO</div>
+  <div class="tbtn" id="bDuel">DUELO</div>
 </div>
 
 <div class="overlay" id="menu">
@@ -278,6 +290,7 @@ body.split #msg{top:calc(50% - .6em)}
       <dt>Salir</dt><dd>Botón Salir arriba a la izquierda, o pausa con <kbd>P</kbd> y pulsa <kbd>Q</kbd></dd>
       <dt>Jugador 2</dt><dd><kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd> conducir · <kbd>Enter</kbd> o <kbd>Ctrl</kbd> derecho saltar · <kbd>Shift</kbd> derecho turbo. Con mando también vale</dd>
       <dt>Air roll</dt><dd>Se activa solo al volar: en el aire, <kbd>A</kbd> y <kbd>D</kbd> hacen que el coche dé vueltas sobre sí mismo. Si quieres girar a los lados en el aire, mantén <kbd>V</kbd>. Jugador 2: tecla <kbd>.</kbd> (punto). Con mando: botón LB</dd>
+      <dt><kbd>Z</kbd></dt><dd>¡Duelo! En un partido, los conductores salen del coche con pistolas de pintura. <kbd>W</kbd> <kbd>S</kbd> andar, <kbd>A</kbd> <kbd>D</kbd> girar, <kbd>Espacio</kbd> o <kbd>C</kbd> disparar. Con 3 impactos quedas eliminado. Los coches del equipo que pierde explotan. Jugador 2: tecla <kbd>,</kbd> (coma). Con mando: botón Y</dd>
       <dt><kbd>M</kbd></dt><dd>Cambiar cámara: mirando al balón o detrás del coche</dd>
     </dl>
     <p class="tip">Cada coche se desbloquea completando su misión; el progreso se guarda en este navegador. Puntos: gol 100 (+30 si es aéreo) · asistencia 50 · parada 50 · tiro a puerta 20. Tu coche lleva un rombo blanco encima. Marcas en la portería naranja. Si hay empate al final, gol de oro. También funciona con mando de consola y en pantalla táctil.</p>
@@ -588,6 +601,7 @@ const keys={};
 const touch={x:0,y:0,jump:false,boost:false};
 let pad={throttle:0,steer:0,jump:false,boost:false};
 let padPrev={start:false};
+const padY=[];
 addEventListener('keydown',e=>{
   if(e.target&&e.target.tagName==='INPUT')return;
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
@@ -596,6 +610,8 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyP'||e.code==='Escape')togglePause();
   if(e.code==='KeyQ'&&game.state==='paused')goToMenu();
   if(e.code==='KeyM')toggleCam();
+  if(e.code==='KeyZ')requestDuel(players[0]);
+  if(e.code==='Comma'&&game.two)requestDuel(players[1]);
   if(e.code==='KeyN')muted=!muted;
   if(e.code==='Enter'&&(game.state==='menu'||game.state==='over'))startMatch();
 });
@@ -613,6 +629,7 @@ function pollPad(){
     const b=i=>gp.buttons[i]?gp.buttons[i]:{pressed:false,value:0};
     gpads.push({steer:dz(gp.axes[0]||0),stickY:dz(gp.axes[1]||0),trig:(b(7).value||0)-(b(6).value||0),jump:b(0).pressed,boost:b(1).pressed||b(2).pressed,roll:b(4).pressed});
     if(b(9).pressed)start=true;
+    const yi=gpads.length-1,yp=b(3).pressed;if(yp&&!padY[yi]){const who=!game.two?(yi===0?players[0]:null):(gpads.length>=2?players[yi]:players[1]);requestDuel(who);}padY[yi]=yp;
   }
   if(start&&!padPrev.start){if(game.state==='menu'||game.state==='over')startMatch();else togglePause();}
   padPrev={start};
@@ -660,6 +677,7 @@ if(isTouch){
     const off=()=>{touch[key]=false;el.classList.remove('on');};
     el.addEventListener('pointerup',off);el.addEventListener('pointercancel',off);};
   btn('bJump','jump');btn('bBoost','boost');
+  document.getElementById('bDuel').addEventListener('pointerdown',()=>requestDuel(player));
   const pb=document.getElementById('pauseBtn');pb.hidden=false;pb.addEventListener('click',togglePause);
 }
 
@@ -1083,7 +1101,7 @@ function endMatch(){
 }
 function togglePause(){
   if(game.state==='paused'){game.state=game.prev;hideMsg();}
-  else if(['play','countdown','goal'].includes(game.state)){game.prev=game.state;game.state='paused';showMsg('PAUSA<small>P PARA SEGUIR · Q PARA SALIR</small>','var(--boost)',0);}
+  else if(['play','countdown','goal','duel','duelEnd'].includes(game.state)){game.prev=game.state;game.state='paused';showMsg('PAUSA<small>P PARA SEGUIR · Q PARA SALIR</small>','var(--boost)',0);}
 }
 
 function chips(groupId,cb){const g=$(groupId);g.addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;g.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed',c===b?'true':'false'));cb(b.dataset.v);});}
@@ -1201,6 +1219,7 @@ function endTraining(){
   $('menu').hidden=false;
 }
 function goToMenu(){
+  cleanupDuel();
   game.state='menu';game.two=false;hideMsg();
   document.body.classList.remove('split');$('boost2').hidden=true;
   $('exitBtn').hidden=true;$('result').hidden=true;$('stats').hidden=true;$('newCars').hidden=true;
@@ -1374,6 +1393,7 @@ function updatePads(dt){
 const camera2=new THREE.PerspectiveCamera(70,1,0.1,600);
 const cams=[{cam:camera,pos:camPos,look:camLook,up:new V(0,1,0),hf:new V(0,0,1)},{cam:camera2,pos:new V(0,30,80),look:new V(0,2,0),up:new V(0,1,0),hf:new V(0,0,-1)}];
 function updateCamera(dt){
+  if(game.state==='duel'||game.state==='duelEnd'||(game.state==='paused'&&(game.prev==='duel'||game.prev==='duelEnd'))){players.forEach((c,i)=>duelCam(c,cams[i],dt));return;}
   if(game.state==='menu'){
     orbit+=dt*.07;camera.up.set(0,1,0);
     camera.position.set(Math.sin(orbit)*110,42,Math.cos(orbit)*135);camera.lookAt(0,2,0);
@@ -1428,6 +1448,175 @@ function renderAll(){
   }
 }
 
+/* ---------- Duelo: los conductores salen con pistolas de pintura ---------- */
+const DUEL={drivers:[],shots:[],decals:[],t:0,cooldown:0,endT:0,max:25};
+const splatGeo=new THREE.CircleGeometry(1,20);
+function paintSplat(p,team,size){
+  const m=new THREE.Mesh(splatGeo,new THREE.MeshBasicMaterial({color:COL[team],transparent:true,opacity:.85,depthWrite:false}));
+  m.rotation.x=-Math.PI/2;m.position.set(p.x+(Math.random()-.5)*2,.05+DUEL.decals.length*.001,p.z+(Math.random()-.5)*2);
+  m.scale.set(size*(.7+Math.random()*.6),size*(.7+Math.random()*.6),1);m.rotation.z=Math.random()*6;scene.add(m);DUEL.decals.push(m);
+}
+const DUEL_FIRE_UNUSED=0;const DUEL_FIRE={easy:.9,normal:.6,hard:.42},DUEL_ERR={easy:.13,normal:.07,hard:.035};
+const shotGeo=new THREE.SphereGeometry(.32,8,6);
+function dRight(d){return new V(-Math.cos(d.yaw),0,Math.sin(d.yaw));}
+function dFwd(d){return new V(Math.sin(d.yaw),0,Math.cos(d.yaw));}
+function makeDriver(car){
+  const g=new THREE.Group(),col=COL[car.team];
+  const suit=new THREE.MeshStandardMaterial({color:col,roughness:.55});
+  const dark=new THREE.MeshStandardMaterial({color:0x1a1f2e,roughness:.7});
+  const visor=new THREE.MeshStandardMaterial({color:0x0c1a2c,metalness:.6,roughness:.2});
+  const glow=new THREE.MeshBasicMaterial({color:car.team==='blue'?0x9fd0ff:0xffd0a0});
+  const add=(geo,mat,x,y,z,par)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;(par||g).add(m);return m;};
+  const legs=[-.32,.32].map(x=>{const pv=new THREE.Group();pv.position.set(x,1.1,0);g.add(pv);add(new THREE.BoxGeometry(.45,1.1,.5),dark,0,-.55,0,pv);return pv;});
+  add(new THREE.BoxGeometry(1.3,1.3,.8),suit,0,1.75,0);
+  add(new THREE.BoxGeometry(1.32,.25,.82),dark,0,1.2,0);
+  add(new THREE.BoxGeometry(.35,1,.35),suit,-.85,1.75,0);
+  const arm=add(new THREE.BoxGeometry(.35,.35,1.1),suit,.85,2.05,.45);
+  add(new THREE.SphereGeometry(.58,14,10),suit,0,2.9,0);
+  add(new THREE.BoxGeometry(.8,.32,.12),visor,0,2.92,.52);
+  add(new THREE.BoxGeometry(.28,.34,1.2),dark,.85,1.95,1.05);
+  add(new THREE.BoxGeometry(.2,.2,.24),glow,.85,1.98,1.7);
+  if(car.human){const t=new THREE.Mesh(new THREE.OctahedronGeometry(.45),new THREE.MeshBasicMaterial({color:car.pid?COL.boost:0xffffff}));t.position.y=4.2;g.add(t);}
+  scene.add(g);
+  const p=car.pos.clone();p.y=0;
+  const side=new V().crossVectors(car.fwd,car.up);side.y=0;if(side.lengthSq()<.01)side.set(1,0,0);side.normalize();
+  p.addScaledVector(side,3.6);
+  const lim=(m)=>clamp(m,-1,1);
+  p.x=clamp(p.x,-(A.hw-RC-2),A.hw-RC-2);p.z=clamp(p.z,-(A.hl-RC-2),A.hl-RC-2);
+  return {car,team:car.team,human:car.human,pid:car.pid||0,g,legs,pos:p,yaw:car.team==='blue'?0:Math.PI,hp:3,alive:true,cd:.4,walk:0,strafe:Math.random()<.5?-1:1,flip:1+Math.random(),hitT:0};
+}
+function requestDuel(c){
+  if(!c||game.kind!=='match'||game.state!=='play'||DUEL.cooldown>0)return;
+  const live=cars.filter(x=>!x.dead);
+  if(!live.some(x=>x.team==='blue')||!live.some(x=>x.team==='orange'))return;
+  DUEL.drivers=live.map(makeDriver);
+  DUEL.drivers.forEach(d=>{const e=nearestEnemy(d);if(e)d.yaw=Math.atan2(e.pos.x-d.pos.x,e.pos.z-d.pos.z);});
+  DUEL.shots=[];DUEL.t=0;
+  game.state='duel';document.body.classList.add('duel');
+  showMsg('¡DUELO!<small>'+(c.human?(game.two?c.name+' HA EMPEZADO EL DUELO · ':''):'')+'ESPACIO O C DISPARA · W A S D PARA MOVERTE</small>','#ff5a5a',1.5);
+  beep(330,.5,'sawtooth',.12,-150);setTimeout(()=>beep(660,.4,'square',.08,200),200);
+}
+function nearestEnemy(d){let best=null,bd=1e9;for(const e of DUEL.drivers){if(!e.alive||e.team===d.team)continue;const k=e.pos.distanceTo(d.pos);if(k<bd){bd=k;best=e;}}return best;}
+function fireShot(d,err){
+  const f=dFwd(d),r=dRight(d);
+  const from=d.pos.clone().add(new V(0,1.98,0)).addScaledVector(r,.85).addScaledVector(f,1.8);
+  let aim=null,bestA=.25;
+  for(const e of DUEL.drivers){
+    if(!e.alive||e.team===d.team)continue;
+    const to=e.pos.clone().add(new V(0,1.8,0)).sub(from);const dist=to.length();if(dist>90)continue;
+    const a=Math.acos(clamp(to.clone().setY(0).normalize().dot(f),-1,1));
+    if(a<bestA){bestA=a;aim=to.normalize();}
+  }
+  const dir=aim||f.clone();
+  if(err){const a=(Math.random()-.5)*2*err;const c=Math.cos(a),s=Math.sin(a);const x=dir.x*c+dir.z*s,z=-dir.x*s+dir.z*c;dir.x=x;dir.z=z;dir.y+=(Math.random()-.5)*err;dir.normalize();}
+  const m=new THREE.Mesh(shotGeo,new THREE.MeshBasicMaterial({color:d.team==='blue'?0x7fc4ff:0xffb070}));
+  m.scale.set(1,1,3);m.position.copy(from);m.lookAt(from.clone().add(dir));scene.add(m);
+  DUEL.shots.push({p:from,v:dir.multiplyScalar(80),team:d.team,owner:d,life:1.3,m});
+  if(d.human)beep(900,.08,'square',.05,-500);
+}
+function hitDriver(v,s){
+  v.hp--;v.hitT=.25;
+  for(let i=0;i<24;i++)spawn(s.p,new V(Math.random()-.5,Math.random()*.9,Math.random()-.5).normalize().multiplyScalar(6+Math.random()*10),COL[s.team],.7,1.1,-25);
+  paintSplat(v.pos,s.team,1.4);
+  beep(220,.12,'triangle',.08,-100);
+  if(v.hp>0)return;
+  v.alive=false;v.g.visible=false;
+  const c=v.pos.clone().add(new V(0,1.8,0));
+  for(let i=0;i<60;i++)spawn(c,new V(Math.random()-.5,Math.random()*.8+.2,Math.random()-.5).normalize().multiplyScalar(8+Math.random()*14),i%4?COL[s.team]:0xffffff,1.2,1.6,-25);
+  for(let i=0;i<5;i++)paintSplat(v.pos,s.team,2.6);
+  for(let i=0;i<8;i++)spawn(c.clone().add(new V(0,1.5,0)),new V(Math.cos(i*.785)*5,2,Math.sin(i*.785)*5),COL.boost,.9,.9,0);
+  beep(120,.4,'sawtooth',.12,-60);
+  award(s.owner.car,20,'ELIMINACIÓN');
+  if(v.human){const pe=popEls[v.pid];pe.textContent=(game.two?v.car.name+' ':'')+'¡TE HAN ELIMINADO!';pe.classList.remove('show');void pe.offsetWidth;pe.classList.add('show');}
+}
+function duelTick(dt){
+  DUEL.t+=dt;
+  for(const d of DUEL.drivers){
+    if(!d.alive)continue;
+    d.cd-=dt;d.hitT=Math.max(0,d.hitT-dt);
+    let mv=0,side=0,shoot=false;
+    if(d.human){
+      const inp=playerInput(d.car);
+      d.yaw-=inp.steer*3.2*dt;mv=inp.throttle;shoot=inp.jump||inp.boost;
+      if(shoot&&d.cd<=0){fireShot(d,0);d.cd=.28;}
+    }else{
+      const e=nearestEnemy(d);
+      if(e){
+        const want=Math.atan2(e.pos.x-d.pos.x,e.pos.z-d.pos.z);
+        const diff=wrap(want-d.yaw);d.yaw+=clamp(diff,-3*dt,3*dt);
+        const dist=e.pos.distanceTo(d.pos);
+        mv=dist>24?1:dist<12?-.7:0;
+        d.flip-=dt;if(d.flip<=0){d.strafe*=-1;d.flip=.8+Math.random()*1.4;}
+        side=d.strafe*.6;
+        const sk=d.team==='orange'?game.difficulty:'normal';
+        if(Math.abs(diff)<.18&&d.cd<=0&&DUEL.t>.8){fireShot(d,DUEL_ERR[sk]);d.cd=DUEL_FIRE[sk]*(.8+Math.random()*.5);}
+      }
+    }
+    const f=dFwd(d),r=dRight(d);
+    d.pos.addScaledVector(f,mv*14*dt).addScaledVector(r,side*12*dt);
+    for(const c of cars){if(c.dead)continue;const dx=d.pos.x-c.pos.x,dz=d.pos.z-c.pos.z,l=Math.hypot(dx,dz);if(l<3.2&&l>1e-3&&c.pos.y<4){d.pos.x=c.pos.x+dx/l*3.2;d.pos.z=c.pos.z+dz/l*3.2;}}
+    for(const o of DUEL.drivers){if(o===d||!o.alive)continue;const dx=d.pos.x-o.pos.x,dz=d.pos.z-o.pos.z,l=Math.hypot(dx,dz);if(l<1.8&&l>1e-3){d.pos.x=o.pos.x+dx/l*1.8;d.pos.z=o.pos.z+dz/l*1.8;}}
+    d.pos.x=clamp(d.pos.x,-(A.hw-RC-1),A.hw-RC-1);d.pos.z=clamp(d.pos.z,-(A.hl-RC-1),A.hl-RC-1);
+    const moving=Math.abs(mv)+Math.abs(side);d.walk+=dt*10*(moving>.05?1:0);
+    d.legs[0].rotation.x=Math.sin(d.walk)*.7*Math.min(1,moving);d.legs[1].rotation.x=-d.legs[0].rotation.x;
+    d.g.position.copy(d.pos);d.g.rotation.y=d.yaw;
+    const sc=d.hitT>0?1.12:1;d.g.scale.setScalar(sc);
+  }
+  for(let i=DUEL.shots.length-1;i>=0;i--){
+    const s=DUEL.shots[i];s.life-=dt;s.p.addScaledVector(s.v,dt);s.m.position.copy(s.p);
+    let gone=s.life<=0||Math.abs(s.p.x)>A.hw||Math.abs(s.p.z)>A.hl||s.p.y<0.2||s.p.y>A.h;
+    if(!gone)for(const d of DUEL.drivers){if(!d.alive||d.team===s.team)continue;const c=d.pos.clone().add(new V(0,1.8,0));if(c.distanceTo(s.p)<1.25){hitDriver(d,s);gone=true;break;}}
+    if(!gone)for(const c of cars){if(c.dead)continue;if(c.pos.clone().addScaledVector(c.up,1.1).distanceTo(s.p)<2.6){for(let k=0;k<6;k++)spawn(s.p,new V(Math.random()-.5,Math.random(),Math.random()-.5).normalize().multiplyScalar(6),0xffffff,.25,.6,0);gone=true;break;}}
+    if(gone){if(s.p.y<.5)paintSplat(s.p,s.team,.6);scene.remove(s.m);DUEL.shots.splice(i,1);}
+  }
+  const ab=DUEL.drivers.filter(d=>d.alive&&d.team==='blue').length,ao=DUEL.drivers.filter(d=>d.alive&&d.team==='orange').length;
+  if(ab===0||ao===0||DUEL.t>=DUEL.max)endDuel(ab,ao);
+}
+function endDuel(ab,ao){
+  const win=ab>ao?'blue':ao>ab?'orange':null;
+  if(win){
+    const lose=win==='blue'?'orange':'blue';
+    const winners=DUEL.drivers.filter(d=>d.team===win&&d.alive);
+    winners.forEach(d=>award(d.car,40,'DUELO GANADO'));
+    const a=winners[0]?winners[0].car:cars.find(c=>c.team===win);
+    cars.filter(c=>c.team===lose&&!c.dead).forEach(c=>demolish(c,a));
+    showMsg((win==='blue'?'¡GANA EL AZUL!':'¡GANA EL NARANJA!')+'<small>LOS COCHES QUE PIERDEN EXPLOTAN · ¡A LOS COCHES!</small>',teamCss(win),0);
+  }else showMsg('EMPATE<small>¡A LOS COCHES!</small>','var(--boost)',0);
+  game.state='duelEnd';DUEL.endT=2;
+}
+function cleanupDuel(){
+  DUEL.drivers.forEach(d=>scene.remove(d.g));DUEL.shots.forEach(s=>scene.remove(s.m));
+  DUEL.decals.forEach(m=>scene.remove(m));
+  DUEL.drivers=[];DUEL.shots=[];DUEL.decals=[];document.body.classList.remove('duel');
+}
+function duelEndTick(dt){
+  DUEL.endT-=dt;
+  cars.forEach(c=>{if(c.dead>0){c.dead-=dt;if(c.dead<=0)respawn(c);}});
+  if(DUEL.endT<=0){cleanupDuel();hideMsg();game.state='play';DUEL.cooldown=20;}
+}
+function duelCam(c,k,dt){
+  const d=DUEL.drivers.find(x=>x.car===c);
+  let want,look;
+  if(d&&d.alive){
+    const f=dFwd(d),r=dRight(d);
+    want=d.pos.clone().addScaledVector(f,-7.5).addScaledVector(r,1.8).add(new V(0,4.2,0));
+    look=d.pos.clone().addScaledVector(f,14).add(new V(0,2.2,0));
+  }else{
+    const alive=DUEL.drivers.filter(x=>x.alive);
+    const ctr=new V();alive.forEach(x=>ctr.add(x.pos));if(alive.length)ctr.divideScalar(alive.length);
+    want=ctr.clone().add(new V(0,26,-30));look=ctr.clone();
+  }
+  want.y=clamp(want.y,1.5,A.h-2);
+  k.pos.lerp(want,1-Math.exp(-9*dt));k.look.lerp(look,1-Math.exp(-12*dt));k.up.lerp(new V(0,1,0),1-Math.exp(-6*dt));
+  k.cam.up.copy(k.up);k.cam.position.copy(k.pos);k.cam.lookAt(k.look);
+  k.cam.fov+=(70-k.cam.fov)*Math.min(1,dt*5);
+}
+function duelHud(){
+  const ab=DUEL.drivers.filter(d=>d.alive&&d.team==='blue').length,ao=DUEL.drivers.filter(d=>d.alive&&d.team==='orange').length;
+  const hp=players.map(p=>{const d=DUEL.drivers.find(x=>x.car===p);return (game.two?p.name+' ':'TU ')+'VIDA '+(d&&d.alive?d.hp:0);}).join(' · ');
+  $('duelHud').textContent='DUELO · AZUL '+ab+' – '+ao+' NARANJA · '+hp+' · '+Math.max(0,Math.ceil(DUEL.max-DUEL.t))+' s';
+}
+
 function frame(now){
   const dt=Math.min(.033,(now-last)/1000);last=now;
   pollPad();
@@ -1441,7 +1630,10 @@ function frame(now){
     if(game.countdown<=0){game.state='play';showMsg('¡YA!','var(--boost)',.7);beep(880,.3,'square',.07);}
     }
   }
+  if(st==='duel'){duelTick(dt);duelHud();}
+  else if(st==='duelEnd')duelEndTick(dt);
   if(st==='play'||st==='goal'){
+    if(st==='play'&&DUEL.cooldown>0)DUEL.cooldown-=dt;
     assignRoles();
     const inputs=cars.map(c=>c.human?(c.lastInp=playerInput(c)):(st==='play'?aiInput(c,dt):IDLE));
     physics(dt,inputs);
@@ -1486,7 +1678,7 @@ function frame(now){
 }
 // Opening scene: kickoff positions visible behind the menu
 setCar(player,0,-55,0);setCar(cars[1],0,55,Math.PI);
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&['play','countdown','goal'].includes(game.state))togglePause();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&['play','countdown','goal','duel','duelEnd'].includes(game.state))togglePause();});
 requestAnimationFrame(frame);
 })();
 </script>
